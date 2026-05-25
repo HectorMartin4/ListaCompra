@@ -1,0 +1,24 @@
+package com.hmc.listacompracompose.app.data.di
+
+import android.content.Context
+import androidx.room.Room
+import com.hmc.listacompracompose.app.data.db.ItemDatabase
+import org.koin.core.annotation.Module
+import org.koin.core.annotation.Single
+
+@Module
+class LocalModule {
+
+    @Single
+    fun provideRoom(context: Context): ItemDatabase {
+
+        val db = Room.databaseBuilder(
+            context,
+            ItemDatabase::class.java,
+            "shopping-list-db"
+        )
+        db.fallbackToDestructiveMigration(true)
+        db.fallbackToDestructiveMigrationOnDowngrade(true)
+        return db.build()
+    }
+}

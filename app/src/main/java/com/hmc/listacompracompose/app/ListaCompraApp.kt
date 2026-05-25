@@ -1,14 +1,18 @@
 package com.hmc.listacompracompose.app
 
 import android.app.Application
+
 import org.koin.android.ext.koin.androidContext
-import org.koin.core.context.startKoin
+import org.koin.core.annotation.ComponentScan
+import org.koin.core.annotation.KoinApplication
+import org.koin.plugin.module.dsl.startKoin
 
-class ListaCompraApp: Application() {
-
-    override fun onCreate(){
+@KoinApplication
+@ComponentScan("com.hmc.listacompracompose")
+class ListaCompraApp : Application() {
+    override fun onCreate() {
         super.onCreate()
-        startKoin {
+        startKoin<ListaCompraApp> {
             androidContext(this@ListaCompraApp)
         }
     }

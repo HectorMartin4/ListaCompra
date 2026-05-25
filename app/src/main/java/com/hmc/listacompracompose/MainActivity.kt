@@ -1,47 +1,80 @@
 package com.hmc.listacompracompose
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.hmc.listacompracompose.ui.theme.ListaCompraComposeTheme
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.hmc.listacompracompose.features.items.presentation.ItemListScreen
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        Log.d("AppListaCompra", "ACTIVITY: onCreate iniciado")
+
         setContent {
-            ListaCompraComposeTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+            App()
+        }
+    }
+}
+
+@Composable
+fun App() {
+
+    val navController = rememberNavController()
+
+    Scaffold(
+        bottomBar = {
+            BottomBar(navController)
+        }
+    ) { padding ->
+
+        NavHost(
+            navController = navController,
+            startDestination = "item_list",
+            modifier = Modifier.padding(padding)
+        ) {
+            composable("item_list") {
+                ItemListScreen()
             }
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun BottomBar(navController: NavHostController) {
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    ListaCompraComposeTheme {
-        Greeting("Android")
+    NavigationBar {
+
+        val currentRoute = navController
+            .currentBackStackEntryAsState().value?.destination?.route
+
+        NavigationBarItem(
+            selected = currentRoute == "item_list",
+            onClick = {
+                navController.navigate("item_list") {
+                    popUpTo(navController.graph.startDestinationId)
+                    launchSingleTop = true
+                }
+            },
+            icon = { Icon(Icons.Default.List, null) },
+            label = { Text("Lista") }
+        )
     }
 }
+

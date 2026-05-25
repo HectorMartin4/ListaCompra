@@ -1,15 +1,15 @@
 package com.hmc.listacompracompose.features.items.data
 
-import com.hmc.listacompracompose.features.items.data.local.ItemXmlLocalDataSource
-import com.hmc.listacompracompose.features.items.data.remote.ItemListMock
+import com.hmc.listacompracompose.features.items.data.local.db.ItemDbLocalDataSource
+import com.hmc.listacompracompose.features.items.data.remote.ItemApiRemoteDataSource
 import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.items.domain.ItemRepository
 import org.koin.core.annotation.Single
 
 @Single
 class ItemDataRepository(
-    private val localDataSource: ItemXmlLocalDataSource,
-    private val remoteDataSource: ItemListMock
+    private val localDataSource: ItemDbLocalDataSource,
+    private val remoteDataSource: ItemApiRemoteDataSource
 ): ItemRepository {
 
     override suspend fun getItemList(): List<ItemModel> {
