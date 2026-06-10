@@ -15,7 +15,7 @@ interface ItemDao {
     suspend fun saveItems(items: List<ItemEntity>)
 
     @Query("SELECT * FROM $TABLE_ITEM_NAME")
-    fun getAllItems(): List<ItemEntity>
+    suspend fun getAllItems(): List<ItemEntity>
 
     @Delete
     suspend fun deleteItem(item: ItemEntity)

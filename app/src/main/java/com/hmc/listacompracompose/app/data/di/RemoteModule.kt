@@ -8,7 +8,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 @Module
 class RemoteModule {
 
-    private val url = "http://rikicompras-001-site1.rtempurl.com/"
+    private val url = "https://rikicompras-001-site1.rtempurl.com/"
 
     @Single
     fun provideRetrofit(): Retrofit =

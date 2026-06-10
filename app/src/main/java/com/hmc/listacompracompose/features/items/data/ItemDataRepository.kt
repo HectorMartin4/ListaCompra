@@ -1,5 +1,6 @@
 package com.hmc.listacompracompose.features.items.data
 
+import android.util.Log
 import com.hmc.listacompracompose.features.items.data.local.db.ItemDbLocalDataSource
 import com.hmc.listacompracompose.features.items.data.remote.ItemApiRemoteDataSource
 import com.hmc.listacompracompose.features.items.domain.ItemModel
@@ -13,15 +14,27 @@ class ItemDataRepository(
 ): ItemRepository {
 
     override suspend fun getItemList(): List<ItemModel> {
-        var itemList = localDataSource.getItemList()
+        try {
+            Log.d("Keloke", "Antes de localDataSource")
 
-        return if (localDataSource.getItemList().isEmpty()){
-            itemList = remoteDataSource.getItemList()
+            var itemList = localDataSource.getItemList()
 
-            localDataSource.saveItemList(itemList)
-            itemList
-        } else {
-            itemList
+            Log.d("Keloke", "Después de localDataSource")
+
+            return if (itemList.isEmpty()) {
+                Log.d("Keloke", "log2")
+
+                itemList = remoteDataSource.getItemList()
+                localDataSource.saveItemList(itemList)
+
+                itemList
+            } else {
+                Log.d("Keloke", "log3")
+                itemList
+            }
+        } catch (e: Exception) {
+            Log.e("Keloke", "Error en getItemList", e)
+            throw e
         }
     }
 }

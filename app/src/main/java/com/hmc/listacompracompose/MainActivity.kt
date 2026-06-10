@@ -19,7 +19,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.hmc.listacompracompose.features.items.presentation.ItemListScreen
+import com.hmc.listacompracompose.features.items.presentation.ListaCompraPruebaScreen
 
 
 class MainActivity : ComponentActivity() {
@@ -50,7 +50,7 @@ fun App() {
             modifier = Modifier.padding(padding)
         ) {
             composable("item_list") {
-                ItemListScreen()
+                ListaCompraPruebaScreen()
             }
         }
     }

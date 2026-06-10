@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.koin.compiler)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -75,16 +75,21 @@ dependencies {
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    implementation(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler)
 
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
 
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
     implementation(libs.koin.core)
     implementation(libs.koin.annotations)
 
+    ksp(libs.koin.ksp.compiler)
+
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
+}
+
+ksp {
+    arg("KOIN_CONFIG_CHECK", "true")  // Enable compile-time validation
 }
