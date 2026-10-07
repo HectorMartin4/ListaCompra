@@ -2,7 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.koin.compiler)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
 
 android {
@@ -84,12 +86,18 @@ dependencies {
     implementation(libs.koin.core)
     implementation(libs.koin.annotations)
 
-    ksp(libs.koin.ksp.compiler)
+//    ksp(libs.koin.ksp.compiler)
 
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
+    implementation(libs.okhttp)
+    implementation(libs.logging.interceptor)
 }
 
-ksp {
-    arg("KOIN_CONFIG_CHECK", "true")  // Enable compile-time validation
+koinCompiler {
+    userLogs = true
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }

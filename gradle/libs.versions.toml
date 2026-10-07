@@ -10,7 +10,8 @@ kotlin = "2.4.0"
 composeBom = "2026.05.01"
 ksp = "2.1.21-2.0.1"
 koin = "4.2.1"
-koinAnnotations = "2.3.1"
+koinPlugin = "1.2.1"
+#koinAnnotations = "2.3.1"
 retrofit = "3.0.0"
 lifecycleVersion = "2.10.0"
 room = "2.8.4"
@@ -18,6 +19,7 @@ navigationFragmentKtx = "2.9.8"
 navigationUiKtx = "2.9.8"
 navigationCompose = "2.9.8"
 materialIcons = "1.7.8"
+okhttp = "5.4.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -45,11 +47,13 @@ navigation-compose = { module = "androidx.navigation:navigation-compose", versio
 koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
 koin-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
-koin-annotations = { group = "io.insert-koin", name = "koin-annotations", version.ref = "koinAnnotations" }
-koin-ksp-compiler = { group = "io.insert-koin", name = "koin-ksp-compiler", version.ref = "koinAnnotations" }
+koin-annotations = { group = "io.insert-koin", name = "koin-annotations", version.ref = "koin" } # version koinAnnotations
+#koin-ksp-compiler = { group = "io.insert-koin", name = "koin-ksp-compiler", version.ref = "koinAnnotations" }
 
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
 
 androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycleVersion" }
 
@@ -63,3 +67,5 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+room = { id = "androidx.room", version.ref = "room" }
+koin-compiler = { id = "io.insert-koin.compiler.plugin", version.ref = "koinPlugin" }

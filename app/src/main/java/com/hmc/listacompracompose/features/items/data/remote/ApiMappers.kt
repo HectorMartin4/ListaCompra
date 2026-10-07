@@ -15,6 +15,4 @@ fun ItemApiModel.toModel() =
         this.id,
         this.name,
         this.price,
-        amount = 0,
-        check = false,
     )

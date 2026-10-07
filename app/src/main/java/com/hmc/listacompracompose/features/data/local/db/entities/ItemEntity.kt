@@ -1,4 +1,4 @@
-package com.hmc.listacompracompose.features.items.data.local.db
+package com.hmc.listacompracompose.features.data.local.db.entities
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -8,9 +8,7 @@ const val TABLE_ITEM_NAME = "items"
 
 @Entity(tableName = TABLE_ITEM_NAME)
 data class ItemEntity(
-    @PrimaryKey @ColumnInfo(name = "id") val id: Int,
+    @PrimaryKey(autoGenerate = true) @ColumnInfo(name = "id") val id: Int = 0,
     @ColumnInfo(name = "name") val name: String,
-    @ColumnInfo(name = "amount") val amount: Int,
-    @ColumnInfo(name = "isChecked") val isChecked: Boolean,
     @ColumnInfo(name = "price") val price: Double
 )

@@ -10,15 +10,9 @@ import org.koin.core.annotation.Single
 class LocalModule {
 
     @Single
-    fun provideRoom(context: Context): ItemDatabase {
+    fun provideRoom(context: Context): ItemDatabase =
+        Room.databaseBuilder(context, ItemDatabase::class.java, "shopping-list-db")
+            .fallbackToDestructiveMigration(true)
+            .build()
 
-        val db = Room.databaseBuilder(
-            context,
-            ItemDatabase::class.java,
-            "shopping-list-db"
-        )
-        db.fallbackToDestructiveMigration(true)
-        db.fallbackToDestructiveMigrationOnDowngrade(true)
-        return db.build()
-    }
 }

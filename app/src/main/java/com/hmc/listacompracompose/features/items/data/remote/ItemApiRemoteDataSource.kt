@@ -8,6 +8,8 @@ import org.koin.core.annotation.Single
 class ItemApiRemoteDataSource(private val apiService: ApiService) {
 
     suspend fun getItemList(): List<ItemModel> {
+
+        Log.d("Keloke", "Antes del getItemList")
         val response = apiService.getItemList()
 
         Log.d("Keloke", "getItemList: ${response.body()}")
@@ -19,6 +21,18 @@ class ItemApiRemoteDataSource(private val apiService: ApiService) {
 
         } else {
             emptyList()
+        }
+    }
+
+    suspend fun deleteItem(id: Int): Boolean {
+        Log.d("Keloke", "Antes de deleteItem con ID: $id")
+        return try {
+            val response = apiService.deleteItem(id)
+            Log.d("Keloke", "deleteItem response code: ${response.code()}")
+            response.isSuccessful
+        } catch (e: Exception) {
+            Log.e("Keloke", "Error al borrar el ítem: ${e.message}", e)
+            false
         }
     }
 }
