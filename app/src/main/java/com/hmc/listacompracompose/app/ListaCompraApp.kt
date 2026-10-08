@@ -1,7 +1,7 @@
 package com.hmc.listacompracompose.app
 
 import android.app.Application
-import com.hmc.listacompracompose.app.data.di.AppModule
+import com.hmc.listacompracompose.app.di.AppModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.annotation.KoinApplication
 

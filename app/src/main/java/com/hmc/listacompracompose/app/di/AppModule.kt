@@ -1,4 +1,4 @@
-package com.hmc.listacompracompose.app.data.di
+package com.hmc.listacompracompose.app.di
 
 import com.hmc.listacompracompose.features.items.di.ItemModule
 import org.koin.core.annotation.ComponentScan

@@ -1,4 +1,4 @@
-package com.hmc.listacompracompose.app.data.di
+package com.hmc.listacompracompose.app.di
 
 import okhttp3.OkHttpClient
 import org.koin.core.annotation.Module
