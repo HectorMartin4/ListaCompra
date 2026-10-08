@@ -1,8 +1,7 @@
 package com.hmc.listacompracompose.features.items.domain
 
 data class ItemModel(
-    val id: Int,
+    val id: Int = 0,
     val name: String,
-    val amount: Int,
-    val check: Boolean
+    val price: Double
 )

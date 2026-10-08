@@ -1,0 +1,19 @@
+package com.hmc.listacompracompose.features.lists.data.local
+
+import com.hmc.listacompracompose.features.data.local.db.entities.ListItemRow
+import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListEntity
+import com.hmc.listacompracompose.features.lists.domain.ListItemModel
+import com.hmc.listacompracompose.features.lists.domain.ShoppingListModel
+
+fun ShoppingListEntity.toModel() = ShoppingListModel(
+    id = id,
+    name = name
+)
+
+fun ListItemRow.toModel() = ListItemModel(
+    itemId = itemId,
+    name = name,
+    price = price,
+    amount = amount,
+    isChecked = isChecked
+)
