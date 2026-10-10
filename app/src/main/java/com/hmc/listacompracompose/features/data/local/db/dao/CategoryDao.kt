@@ -11,11 +11,11 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface CategoryDao {
 
-    @Query("SELECT * FROM $TABLE_CATEGORY ORDER BY position")
-    fun observeCategories(): Flow<List<CategoryEntity>>
+    @Query("SELECT * FROM $TABLE_CATEGORY WHERE supermarketId = :supermarketId ORDER BY position")
+    fun observeCategories(supermarketId: Int): Flow<List<CategoryEntity>>
 
-    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM $TABLE_CATEGORY")
-    suspend fun nextPosition(): Int
+    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM $TABLE_CATEGORY WHERE supermarketId = :supermarketId")
+    suspend fun nextPosition(supermarketId: Int): Int
 
     @Insert
     suspend fun insert(category: CategoryEntity): Long
@@ -30,13 +30,19 @@ interface CategoryDao {
     suspend fun setPosition(id: Int, position: Int)
 
     @Transaction
-    suspend fun insertAtEnd(name: String) {
-        insert(CategoryEntity(name = name, position = nextPosition()))
+    suspend fun insertAtEnd(name: String, supermarketId: Int) {
+        insert(
+            CategoryEntity(
+                name = name,
+                position = nextPosition(supermarketId),
+                supermarketId = supermarketId
+            )
+        )
     }
-
 
     @Transaction
     suspend fun reorder(orderedIds: List<Int>) {
         orderedIds.forEachIndexed { index, id -> setPosition(id, index) }
     }
 }
+

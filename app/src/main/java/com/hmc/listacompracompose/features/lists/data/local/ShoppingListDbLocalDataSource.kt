@@ -5,17 +5,28 @@ import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListEn
 import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListItemEntity
 import com.hmc.listacompracompose.features.lists.domain.ListItemModel
 import com.hmc.listacompracompose.features.lists.domain.ShoppingListModel
+import com.hmc.listacompracompose.features.supermarkets.data.ActiveSupermarketProvider
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
 
 @Single
-class ShoppingListDbLocalDataSource(private val dao: ShoppingListDao) {
+class ShoppingListDbLocalDataSource(
+    private val dao: ShoppingListDao,
+    private val activeSupermarket: ActiveSupermarketProvider
+) {
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun observeLists(): Flow<List<ShoppingListModel>> =
-        dao.observeLists().map { lists -> lists.map { it.toModel() } }
+        activeSupermarket.activeId
+            .flatMapLatest { supermarketId -> dao.observeLists(supermarketId) }
+            .map { lists -> lists.map { it.toModel() } }
 
     suspend fun createList(name: String) {
-        dao.insertList(ShoppingListEntity(name = name))
+        dao.insertList(
+            ShoppingListEntity(name = name, supermarketId = activeSupermarket.current())
+        )
     }
 
     suspend fun deleteList(listId: Int) = dao.deleteList(listId)
