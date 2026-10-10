@@ -10,5 +10,7 @@ data class ListItemModel(
     val name: String,
     val price: Double,
     val amount: Int,
-    val isChecked: Boolean
+    val isChecked: Boolean,
+    val categoryId: Int? = null,
+    val categoryName: String? = null
 )

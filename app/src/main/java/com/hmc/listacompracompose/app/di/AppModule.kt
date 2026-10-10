@@ -1,6 +1,6 @@
 package com.hmc.listacompracompose.app.di
 
-import com.hmc.listacompracompose.features.items.di.ItemModule
+import com.hmc.listacompracompose.features.di.FeatureModule
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
 
@@ -8,7 +8,7 @@ import org.koin.core.annotation.Module
     includes = [
         LocalModule::class,
         RemoteModule::class,
-        ItemModule::class,
+        FeatureModule::class,
     ]
 )
 @ComponentScan("com.hmc.listacompracompose")

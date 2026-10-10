@@ -45,5 +45,7 @@ data class ListItemRow(
     val name: String,
     val price: Double,
     val amount: Int,
-    val isChecked: Boolean
+    val isChecked: Boolean,
+    val categoryId: Int?,
+    val categoryName: String?
 )

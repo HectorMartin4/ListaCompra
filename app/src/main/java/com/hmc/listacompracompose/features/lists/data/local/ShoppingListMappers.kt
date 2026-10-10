@@ -15,5 +15,7 @@ fun ListItemRow.toModel() = ListItemModel(
     name = name,
     price = price,
     amount = amount,
-    isChecked = isChecked
+    isChecked = isChecked,
+    categoryId = categoryId,
+    categoryName = categoryName
 )
