@@ -15,7 +15,7 @@ import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListIt
         ShoppingListItemEntity::class
                ],
     version = 3,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class ItemDatabase : RoomDatabase() {
     abstract fun itemDao(): ItemDao

@@ -1,6 +1,7 @@
 package com.hmc.listacompracompose.app.data.di
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import androidx.room.Room
 import com.hmc.listacompracompose.app.data.db.ItemDatabase
 import org.koin.core.annotation.Module
@@ -10,9 +11,13 @@ import org.koin.core.annotation.Single
 class LocalModule {
 
     @Single
-    fun provideRoom(context: Context): ItemDatabase =
-        Room.databaseBuilder(context, ItemDatabase::class.java, "shopping-list-db")
-            .fallbackToDestructiveMigration(true)
-            .build()
+    fun provideRoom(context: Context): ItemDatabase {
+        val builder = Room.databaseBuilder(context, ItemDatabase::class.java, "shopping-list-db")
 
+        val isDebuggable = (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (isDebuggable) {
+            builder.fallbackToDestructiveMigration(true)
+        }
+        return builder.build()
+    }
 }
