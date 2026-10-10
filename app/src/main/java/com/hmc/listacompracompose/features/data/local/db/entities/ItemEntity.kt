@@ -16,13 +16,20 @@ const val TABLE_ITEM_NAME = "items"
             parentColumns = ["id"],
             childColumns = ["categoryId"],
             onDelete = ForeignKey.SET_NULL
+        ),
+        ForeignKey(
+            entity = SupermarketEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["supermarketId"],
+            onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("categoryId")]
+    indices = [Index("categoryId"), Index("supermarketId")]
 )
 data class ItemEntity(
     @PrimaryKey(autoGenerate = true) @ColumnInfo(name = "id") val id: Int = 0,
     @ColumnInfo(name = "name") val name: String,
     @ColumnInfo(name = "price") val price: Double,
-    @ColumnInfo(name = "categoryId") val categoryId: Int? = null
+    @ColumnInfo(name = "categoryId") val categoryId: Int? = null,
+    @ColumnInfo(name = "supermarketId") val supermarketId: Int = DEFAULT_SUPERMARKET_ID
 )

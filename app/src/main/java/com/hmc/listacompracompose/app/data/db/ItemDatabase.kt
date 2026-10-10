@@ -9,15 +9,17 @@ import com.hmc.listacompracompose.features.data.local.db.entities.CategoryEntity
 import com.hmc.listacompracompose.features.data.local.db.entities.ItemEntity
 import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListEntity
 import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListItemEntity
+import com.hmc.listacompracompose.features.data.local.db.entities.SupermarketEntity
 
 @Database(
     entities = [
         ItemEntity::class,
         ShoppingListEntity::class,
         ShoppingListItemEntity::class,
-        CategoryEntity::class
+        CategoryEntity::class,
+        SupermarketEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class ItemDatabase : RoomDatabase() {
