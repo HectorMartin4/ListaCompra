@@ -16,8 +16,8 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ShoppingListDao {
 
-    @Query("SELECT * FROM $TABLE_SHOPPING_LIST ORDER BY id")
-    fun observeLists(): Flow<List<ShoppingListEntity>>
+    @Query("SELECT * FROM $TABLE_SHOPPING_LIST WHERE supermarketId = :supermarketId ORDER BY id")
+    fun observeLists(supermarketId: Int): Flow<List<ShoppingListEntity>>
 
     @Insert
     suspend fun insertList(list: ShoppingListEntity): Long

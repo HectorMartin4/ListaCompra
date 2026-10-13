@@ -2,11 +2,15 @@ package com.hmc.listacompracompose.features.items.data
 
 import android.content.Context
 import android.util.Log
+import com.hmc.listacompracompose.features.data.local.db.entities.DEFAULT_SUPERMARKET_ID
 import com.hmc.listacompracompose.features.items.data.db.ItemDbLocalDataSource
 import com.hmc.listacompracompose.features.items.data.mock.mockItemList
 import com.hmc.listacompracompose.features.items.data.remote.ItemApiRemoteDataSource
 import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.items.domain.ItemRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onStart
 import org.koin.core.annotation.Single
 
 @Single
@@ -18,23 +22,26 @@ class ItemDataRepository(
 
     private val prefs = context.getSharedPreferences("items_prefs", Context.MODE_PRIVATE)
 
-    override suspend fun getItemList(): List<ItemModel> {
-        if (!prefs.getBoolean(KEY_INITIAL_LOADED, false)) {
+    override fun observeItemList(): Flow<List<ItemModel>> =
+        localDataSource.observeItems().onStart { loadInitialDataIfNeeded() }
 
-            // --- OPCIÓN MOCK ---
-            localDataSource.saveItemList(mockItemList)
-            Log.d(TAG, "Mock guardado en la BD local")
+    override suspend fun getItemList(): List<ItemModel> = observeItemList().first()
 
-            // --- OPCIÓN API ---
-            /*
-            val remoteList = remoteDataSource.getItemList()
-            localDataSource.saveItemList(remoteList)
-            Log.d(TAG, "Datos remotos guardados con éxito")
-            */
+    private suspend fun loadInitialDataIfNeeded() {
+        if (prefs.getBoolean(KEY_INITIAL_LOADED, false)) return
 
-            prefs.edit().putBoolean(KEY_INITIAL_LOADED, true).apply()
-        }
-        return localDataSource.getItemList()
+        // --- OPCIÓN MOCK ---
+        localDataSource.saveItemList(mockItemList, DEFAULT_SUPERMARKET_ID)
+        Log.d(TAG, "Mock guardado en la BD local")
+
+        // --- OPCIÓN API ---
+        /*
+        val remoteList = remoteDataSource.getItemList()
+        localDataSource.saveItemList(remoteList, DEFAULT_SUPERMARKET_ID)
+        Log.d(TAG, "Datos remotos guardados con éxito")
+        */
+
+        prefs.edit().putBoolean(KEY_INITIAL_LOADED, true).apply()
     }
 
     override suspend fun insertItem(item: ItemModel): Boolean {
@@ -48,16 +55,12 @@ class ItemDataRepository(
         }
     }
 
-    override suspend fun deleteItem(item: ItemModel) {
-        localDataSource.deleteItem(item)
-    }
+    override suspend fun updateItem(item: ItemModel) = localDataSource.updateItem(item)
 
-    override suspend fun updateItem(item: ItemModel) {
-        localDataSource.updateItem(item)
-    }
+    override suspend fun deleteItem(item: ItemModel) = localDataSource.deleteItem(item)
 
     private companion object {
         const val TAG = "ListaCompra"
-        const val KEY_INITIAL_LOADED = "mock_loaded"
+        const val KEY_INITIAL_LOADED = "initial_data_loaded"
     }
 }

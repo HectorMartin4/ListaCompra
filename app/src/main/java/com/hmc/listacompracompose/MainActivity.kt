@@ -31,6 +31,7 @@ import com.hmc.listacompracompose.features.categories.presentation.CategoriesVie
 import com.hmc.listacompracompose.features.items.presentation.itemList.ItemListView
 import com.hmc.listacompracompose.features.lists.presentation.ShoppingListsView
 import com.hmc.listacompracompose.features.lists.presentation.detail.ShoppingListDetailView
+import com.hmc.listacompracompose.features.supermarkets.presentation.SupermarketsView
 import com.hmc.listacompracompose.ui.theme.ListaCompraComposeTheme
 
 class MainActivity : ComponentActivity() {
@@ -55,6 +56,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
 object Routes {
     const val LIST_DETAIL = "list_detail/{listId}"
     const val CATEGORIES = "categories"
+    const val SUPERMARKETS = "supermarkets"
     fun listDetail(listId: Int) = "list_detail/$listId"
 }
 
@@ -77,18 +79,24 @@ fun App() {
         ) {
             composable(Screen.ShoppingList.route) {
                 ShoppingListsView(
-                    onListClick = { listId -> navController.navigate(Routes.listDetail(listId)) }
+                    onListClick = { listId -> navController.navigate(Routes.listDetail(listId)) },
+                    onManageSupermarkets = { navController.navigate(Routes.SUPERMARKETS) }
                 )
             }
 
             composable(Screen.Catalog.route) {
                 ItemListView(
-                    onOpenCategories = { navController.navigate(Routes.CATEGORIES) }
+                    onOpenCategories = { navController.navigate(Routes.CATEGORIES) },
+                    onManageSupermarkets = { navController.navigate(Routes.SUPERMARKETS) }
                 )
             }
 
             composable(Routes.CATEGORIES) {
                 CategoriesView(onBack = { navController.popBackStack() })
+            }
+
+            composable(Routes.SUPERMARKETS) {
+                SupermarketsView(onBack = { navController.popBackStack() })
             }
 
             composable(

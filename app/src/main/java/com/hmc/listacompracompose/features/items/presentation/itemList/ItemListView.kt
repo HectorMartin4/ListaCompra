@@ -47,12 +47,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hmc.listacompracompose.features.categories.domain.CategoryModel
 import com.hmc.listacompracompose.features.items.domain.ItemModel
+import com.hmc.listacompracompose.features.supermarkets.presentation.SupermarketSelector
 import com.hmc.listacompracompose.ui.theme.appTopBarColors
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun ItemListView(
     onOpenCategories: () -> Unit,
+    onManageSupermarkets: () -> Unit,
     viewModel: ItemListViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -63,7 +65,8 @@ fun ItemListView(
         onDelete = viewModel::deleteCatalogItem,
         onErrorShown = viewModel::errorShown,
         onEdit = viewModel::updateItem,
-        onOpenCategories = onOpenCategories
+        onOpenCategories = onOpenCategories,
+        onManageSupermarkets = onManageSupermarkets
     )
 }
 
@@ -75,6 +78,7 @@ fun ItemListContent(
     onDelete: (ItemModel) -> Unit,
     onEdit: (ItemModel) -> Unit,
     onErrorShown: () -> Unit,
+    onManageSupermarkets: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenCategories: () -> Unit
 ) {
@@ -97,7 +101,7 @@ fun ItemListContent(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Catálogo de Productos") },
+                title = { SupermarketSelector(onManage = onManageSupermarkets) },
                 actions = {
                     TextButton(onClick = onOpenCategories) { Text("Categorías") }
                 },
