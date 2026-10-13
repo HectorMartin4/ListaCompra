@@ -3,20 +3,25 @@ package com.hmc.listacompracompose.features.items.presentation.itemList
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hmc.listacompracompose.features.categories.domain.CategoryModel
+import com.hmc.listacompracompose.features.categories.domain.ObserveCategoriesUseCase
 import com.hmc.listacompracompose.features.items.domain.DeleteItemUseCase
 import com.hmc.listacompracompose.features.items.domain.GetItemListUseCase
 import com.hmc.listacompracompose.features.items.domain.InsertItemUseCase
 import com.hmc.listacompracompose.features.items.domain.ItemModel
+import com.hmc.listacompracompose.features.items.domain.UpdateItemUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
 
 data class ItemListUiState(
     val itemList: List<ItemModel> = emptyList(),
+    val categories: List<CategoryModel> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -25,7 +30,9 @@ data class ItemListUiState(
 class ItemListViewModel(
     private val getItemListUseCase: GetItemListUseCase,
     private val insertItemUseCase: InsertItemUseCase,
-    private val deleteItemUseCase: DeleteItemUseCase
+    private val deleteItemUseCase: DeleteItemUseCase,
+    private val observeCategoriesUseCase: ObserveCategoriesUseCase,
+    private val updateItemUseCase: UpdateItemUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ItemListUiState())
@@ -33,6 +40,7 @@ class ItemListViewModel(
 
     init {
         loadItems()
+        observeCategories()
     }
 
     fun loadItems() = launchSafely("No se pudo cargar el catálogo") {
@@ -44,10 +52,12 @@ class ItemListViewModel(
         }
     }
 
-    fun addItem(name: String, price: Double) = launchSafely("No se pudo guardar el producto") {
+    fun addItem(name: String, price: Double, categoryId: Int?) =
+        launchSafely("No se pudo guardar el producto") {
         val newItem = ItemModel(
-            name = name.trim() ,
-            price = price
+            name = name.trim(),
+            price = price,
+            categoryId = categoryId
         )
         if (insertItemUseCase(newItem)) {
             refreshItems()
@@ -57,7 +67,7 @@ class ItemListViewModel(
     }
 
     fun deleteCatalogItem(item: ItemModel) = launchSafely("No se pudo eliminar el producto") {
-        deleteItemUseCase(item) // si devuelve Boolean, compruébalo como en addItem
+        deleteItemUseCase(item)
         refreshItems()
     }
 
@@ -65,10 +75,15 @@ class ItemListViewModel(
         _uiState.update { it.copy(error = null) }
     }
 
-    // Recarga la lista sin tocar isLoading, para que no desaparezca al añadir o borrar
+
     private suspend fun refreshItems() {
         val items = getItemListUseCase()
         _uiState.update { it.copy(itemList = items) }
+    }
+
+    fun updateItem(item: ItemModel) = launchSafely("No se pudieron guardar los cambios") {
+        updateItemUseCase(item)
+        refreshItems()
     }
 
     private fun showError(message: String) {
@@ -85,6 +100,14 @@ class ItemListViewModel(
                 Log.e(TAG, errorMessage, e)
                 showError(errorMessage)
             }
+        }
+    }
+
+    private fun observeCategories() {
+        viewModelScope.launch {
+            observeCategoriesUseCase()
+                .catch { e -> Log.e(TAG, "Error al observar las categorías", e) }
+                .collect { categories -> _uiState.update { it.copy(categories = categories) } }
         }
     }
 

@@ -3,8 +3,8 @@ package com.hmc.listacompracompose.features.items.data
 import android.content.Context
 import android.util.Log
 import com.hmc.listacompracompose.features.items.data.db.ItemDbLocalDataSource
-import com.hmc.listacompracompose.features.items.data.remote.ItemApiRemoteDataSource
 import com.hmc.listacompracompose.features.items.data.mock.mockItemList
+import com.hmc.listacompracompose.features.items.data.remote.ItemApiRemoteDataSource
 import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.items.domain.ItemRepository
 import org.koin.core.annotation.Single
@@ -50,6 +50,10 @@ class ItemDataRepository(
 
     override suspend fun deleteItem(item: ItemModel) {
         localDataSource.deleteItem(item)
+    }
+
+    override suspend fun updateItem(item: ItemModel) {
+        localDataSource.updateItem(item)
     }
 
     private companion object {

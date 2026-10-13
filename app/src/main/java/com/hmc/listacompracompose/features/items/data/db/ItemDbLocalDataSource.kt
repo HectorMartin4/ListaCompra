@@ -27,4 +27,8 @@ class ItemDbLocalDataSource(private val itemDao: ItemDao) {
     suspend fun deleteItem(item: ItemModel) {
         itemDao.deleteItem(item.toEntity())
     }
+
+    suspend fun updateItem(item: ItemModel) {
+        itemDao.updateItem(item.toEntity())
+    }
 }

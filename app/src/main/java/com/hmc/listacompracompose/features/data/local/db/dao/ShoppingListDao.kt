@@ -7,6 +7,7 @@ import androidx.room.Query
 import com.hmc.listacompracompose.features.data.local.db.entities.ListItemRow
 import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListEntity
 import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListItemEntity
+import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_CATEGORY
 import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_ITEM_NAME
 import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_SHOPPING_LIST
 import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_SHOPPING_LIST_ITEM
@@ -26,12 +27,14 @@ interface ShoppingListDao {
 
     @Query(
         """
-        SELECT i.id AS itemId, i.name, i.price, li.amount, li.isChecked
-        FROM $TABLE_SHOPPING_LIST_ITEM li
-        INNER JOIN $TABLE_ITEM_NAME i ON i.id = li.itemId
-        WHERE li.listId = :listId
-        ORDER BY i.name
-        """
+    SELECT i.id AS itemId, i.name, i.price, li.amount, li.isChecked,
+           c.id AS categoryId, c.name AS categoryName
+    FROM $TABLE_SHOPPING_LIST_ITEM li
+    INNER JOIN $TABLE_ITEM_NAME i ON i.id = li.itemId
+    LEFT JOIN $TABLE_CATEGORY c ON c.id = i.categoryId
+    WHERE li.listId = :listId
+    ORDER BY c.position IS NULL, c.position, i.name
+    """
     )
     fun observeListItems(listId: Int): Flow<List<ListItemRow>>
 

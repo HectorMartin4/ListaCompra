@@ -4,13 +4,12 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -19,7 +18,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
@@ -29,12 +27,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.hmc.listacompracompose.features.categories.presentation.CategoriesView
 import com.hmc.listacompracompose.features.items.presentation.itemList.ItemListView
 import com.hmc.listacompracompose.features.lists.presentation.ShoppingListsView
 import com.hmc.listacompracompose.features.lists.presentation.detail.ShoppingListDetailView
 import com.hmc.listacompracompose.ui.theme.ListaCompraComposeTheme
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.WindowInsets
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,6 +54,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
 
 object Routes {
     const val LIST_DETAIL = "list_detail/{listId}"
+    const val CATEGORIES = "categories"
     fun listDetail(listId: Int) = "list_detail/$listId"
 }
 
@@ -84,7 +82,13 @@ fun App() {
             }
 
             composable(Screen.Catalog.route) {
-                ItemListView()
+                ItemListView(
+                    onOpenCategories = { navController.navigate(Routes.CATEGORIES) }
+                )
+            }
+
+            composable(Routes.CATEGORIES) {
+                CategoriesView(onBack = { navController.popBackStack() })
             }
 
             composable(
@@ -112,7 +116,8 @@ fun BottomBar(navController: NavHostController) {
         items.forEach { screen ->
             NavigationBarItem(
                 selected = currentRoute == screen.route ||
-                        (screen == Screen.ShoppingList && currentRoute == Routes.LIST_DETAIL),
+                        (screen == Screen.ShoppingList && currentRoute == Routes.LIST_DETAIL) ||
+                        (screen == Screen.Catalog && currentRoute == Routes.CATEGORIES),
                 onClick = {
                     if (currentRoute != screen.route) {
                         navController.navigate(screen.route) {

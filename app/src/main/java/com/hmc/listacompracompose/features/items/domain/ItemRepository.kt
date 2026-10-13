@@ -7,4 +7,6 @@ interface ItemRepository {
     suspend fun insertItem(item: ItemModel): Boolean
 
     suspend fun deleteItem(item: ItemModel)
+
+    suspend fun updateItem(item: ItemModel)
 }
