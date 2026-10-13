@@ -23,5 +23,5 @@ data class CategoryEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
     val position: Int,
-    val supermarketId: Int = DEFAULT_SUPERMARKET_ID
+    val supermarketId: Int
 )

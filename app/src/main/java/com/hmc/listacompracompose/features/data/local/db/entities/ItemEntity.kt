@@ -31,5 +31,5 @@ data class ItemEntity(
     @ColumnInfo(name = "name") val name: String,
     @ColumnInfo(name = "price") val price: Double,
     @ColumnInfo(name = "categoryId") val categoryId: Int? = null,
-    @ColumnInfo(name = "supermarketId") val supermarketId: Int = DEFAULT_SUPERMARKET_ID
+    @ColumnInfo(name = "supermarketId") val supermarketId: Int
 )

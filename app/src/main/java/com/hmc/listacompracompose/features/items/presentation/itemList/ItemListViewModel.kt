@@ -9,13 +9,15 @@ import com.hmc.listacompracompose.features.items.domain.DeleteItemUseCase
 import com.hmc.listacompracompose.features.items.domain.GetItemListUseCase
 import com.hmc.listacompracompose.features.items.domain.InsertItemUseCase
 import com.hmc.listacompracompose.features.items.domain.ItemModel
+import com.hmc.listacompracompose.features.items.domain.ObserveItemListUseCase
 import com.hmc.listacompracompose.features.items.domain.UpdateItemUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
 
@@ -28,66 +30,57 @@ data class ItemListUiState(
 
 @KoinViewModel
 class ItemListViewModel(
-    private val getItemListUseCase: GetItemListUseCase,
+    observeItemListUseCase: ObserveItemListUseCase,
+    observeCategoriesUseCase: ObserveCategoriesUseCase,
     private val insertItemUseCase: InsertItemUseCase,
-    private val deleteItemUseCase: DeleteItemUseCase,
-    private val observeCategoriesUseCase: ObserveCategoriesUseCase,
-    private val updateItemUseCase: UpdateItemUseCase
+    private val updateItemUseCase: UpdateItemUseCase,
+    private val deleteItemUseCase: DeleteItemUseCase
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ItemListUiState())
-    val uiState: StateFlow<ItemListUiState> = _uiState.asStateFlow()
+    private val _error = MutableStateFlow<String?>(null)
 
-    init {
-        loadItems()
-        observeCategories()
-    }
-
-    fun loadItems() = launchSafely("No se pudo cargar el catálogo") {
-        _uiState.update { it.copy(isLoading = true) }
-        try {
-            refreshItems()
-        } finally {
-            _uiState.update { it.copy(isLoading = false) }
-        }
-    }
+    val uiState: StateFlow<ItemListUiState> = combine(
+        observeItemListUseCase().catch { e ->
+            Log.e(TAG, "Error al observar el catálogo", e)
+            _error.value = "No se pudo cargar el catálogo"
+            emit(emptyList())
+        },
+        observeCategoriesUseCase().catch { e ->
+            Log.e(TAG, "Error al observar las categorías", e)
+            emit(emptyList())
+        },
+        _error
+    ) { items, categories, error ->
+        ItemListUiState(
+            itemList = items,
+            categories = categories,
+            isLoading = false,
+            error = error
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = ItemListUiState(isLoading = true)
+    )
 
     fun addItem(name: String, price: Double, categoryId: Int?) =
         launchSafely("No se pudo guardar el producto") {
-        val newItem = ItemModel(
-            name = name.trim(),
-            price = price,
-            categoryId = categoryId
-        )
-        if (insertItemUseCase(newItem)) {
-            refreshItems()
-        } else {
-            showError("No se pudo guardar el producto")
+            val newItem = ItemModel(name = name.trim(), price = price, categoryId = categoryId)
+            if (!insertItemUseCase(newItem)) {
+                _error.value = "No se pudo guardar el producto"
+            }
         }
+
+    fun updateItem(item: ItemModel) = launchSafely("No se pudieron guardar los cambios") {
+        updateItemUseCase(item)
     }
 
     fun deleteCatalogItem(item: ItemModel) = launchSafely("No se pudo eliminar el producto") {
         deleteItemUseCase(item)
-        refreshItems()
     }
 
     fun errorShown() {
-        _uiState.update { it.copy(error = null) }
-    }
-
-
-    private suspend fun refreshItems() {
-        val items = getItemListUseCase()
-        _uiState.update { it.copy(itemList = items) }
-    }
-
-    fun updateItem(item: ItemModel) = launchSafely("No se pudieron guardar los cambios") {
-        updateItemUseCase(item)
-        refreshItems()
-    }
-
-    private fun showError(message: String) {
-        _uiState.update { it.copy(error = message) }
+        _error.value = null
     }
 
     private fun launchSafely(errorMessage: String, block: suspend () -> Unit) {
@@ -98,16 +91,8 @@ class ItemListViewModel(
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, errorMessage, e)
-                showError(errorMessage)
+                _error.value = errorMessage
             }
-        }
-    }
-
-    private fun observeCategories() {
-        viewModelScope.launch {
-            observeCategoriesUseCase()
-                .catch { e -> Log.e(TAG, "Error al observar las categorías", e) }
-                .collect { categories -> _uiState.update { it.copy(categories = categories) } }
         }
     }
 

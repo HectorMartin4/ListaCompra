@@ -23,7 +23,7 @@ const val TABLE_SHOPPING_LIST_ITEM = "shopping_list_item"
 data class ShoppingListEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
-    val supermarketId: Int = DEFAULT_SUPERMARKET_ID
+    val supermarketId: Int
 )
 
 @Entity(
