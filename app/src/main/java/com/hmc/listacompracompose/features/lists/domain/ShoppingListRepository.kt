@@ -15,4 +15,6 @@ interface ShoppingListRepository {
     suspend fun removeItemFromList(listId: Int, itemId: Int)
     suspend fun setChecked(listId: Int, itemId: Int, checked: Boolean)
     suspend fun setAmount(listId: Int, itemId: Int, amount: Int)
+
+    suspend fun renameList(listId: Int, name: String)
 }

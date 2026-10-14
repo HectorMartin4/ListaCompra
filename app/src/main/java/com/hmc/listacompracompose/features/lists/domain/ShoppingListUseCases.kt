@@ -45,3 +45,9 @@ class SetItemAmountUseCase(private val repository: ShoppingListRepository) {
     suspend operator fun invoke(listId: Int, itemId: Int, amount: Int) =
         repository.setAmount(listId, itemId, amount.coerceAtLeast(1))
 }
+
+@Single
+class RenameShoppingListUseCase(private val repository: ShoppingListRepository) {
+    suspend operator fun invoke(listId: Int, name: String) =
+        repository.renameList(listId, name.trim())
+}

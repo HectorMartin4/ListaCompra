@@ -11,11 +11,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -58,6 +60,7 @@ fun ShoppingListsView(
         onDelete = { viewModel.deleteList(it.id) },
         onListClick = onListClick,
         onErrorShown = viewModel::errorShown,
+        onRename = viewModel::renameList,
         onManageSupermarkets = onManageSupermarkets
     )
 }
@@ -71,10 +74,12 @@ fun ShoppingListsContent(
     onListClick: (Int) -> Unit,
     onErrorShown: () -> Unit,
     onManageSupermarkets: () -> Unit,
+    onRename: (id: Int, name: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
     var listToDelete by remember { mutableStateOf<ShoppingListModel?>(null) }
+    var listToRename by remember { mutableStateOf<ShoppingListModel?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(state.error) {
@@ -126,6 +131,7 @@ fun ShoppingListsContent(
                             ShoppingListRow(
                                 list = list,
                                 onClick = { onListClick(list.id) },
+                                onRename = { listToRename = list },
                                 onDelete = { listToDelete = list }
                             )
                         }
@@ -136,11 +142,26 @@ fun ShoppingListsContent(
     }
 
     if (showCreateDialog) {
-        NewListDialog(
+        ListNameDialog(
+            title = "Nueva lista",
+            confirmText = "Crear",
             onDismiss = { showCreateDialog = false },
             onConfirm = { name ->
                 onCreate(name)
                 showCreateDialog = false
+            }
+        )
+    }
+
+    listToRename?.let { list ->
+        ListNameDialog(
+            title = "Renombrar lista",
+            confirmText = "Guardar",
+            initialName = list.name,
+            onDismiss = { listToRename = null },
+            onConfirm = { name ->
+                onRename(list.id, name)
+                listToRename = null
             }
         )
     }
@@ -167,9 +188,12 @@ fun ShoppingListsContent(
 fun ShoppingListRow(
     list: ShoppingListModel,
     onClick: () -> Unit,
+    onRename: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
@@ -187,27 +211,47 @@ fun ShoppingListRow(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Borrar lista",
-                    tint = MaterialTheme.colorScheme.error
-                )
+            Box {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Renombrar") },
+                        onClick = {
+                            menuExpanded = false
+                            onRename()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Borrar") },
+                        onClick = {
+                            menuExpanded = false
+                            onDelete()
+                        }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun NewListDialog(
+fun ListNameDialog(
+    title: String,
+    confirmText: String,
     onDismiss: () -> Unit,
-    onConfirm: (name: String) -> Unit
+    onConfirm: (name: String) -> Unit,
+    initialName: String = ""
 ) {
-    var name by rememberSaveable { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf(initialName) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nueva lista") },
+        title = { Text(title) },
         text = {
             OutlinedTextField(
                 value = name,
@@ -220,7 +264,7 @@ fun NewListDialog(
             TextButton(
                 enabled = name.isNotBlank(),
                 onClick = { onConfirm(name.trim()) }
-            ) { Text("Crear") }
+            ) { Text(confirmText) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
     )

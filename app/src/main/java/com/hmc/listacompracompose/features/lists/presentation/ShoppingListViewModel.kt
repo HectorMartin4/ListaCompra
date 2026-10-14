@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.hmc.listacompracompose.features.lists.domain.CreateShoppingListUseCase
 import com.hmc.listacompracompose.features.lists.domain.DeleteShoppingListUseCase
 import com.hmc.listacompracompose.features.lists.domain.ObserveShoppingListsUseCase
+import com.hmc.listacompracompose.features.lists.domain.RenameShoppingListUseCase
 import com.hmc.listacompracompose.features.lists.domain.ShoppingListModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +28,8 @@ data class ShoppingListsUiState(
 class ShoppingListsViewModel(
     observeListsUseCase: ObserveShoppingListsUseCase,
     private val createListUseCase: CreateShoppingListUseCase,
-    private val deleteListUseCase: DeleteShoppingListUseCase
+    private val deleteListUseCase: DeleteShoppingListUseCase,
+    private val renameListUseCase: RenameShoppingListUseCase
 ) : ViewModel() {
 
     private val _error = MutableStateFlow<String?>(null)
@@ -53,6 +55,10 @@ class ShoppingListsViewModel(
 
     fun deleteList(listId: Int) = launchSafely("No se pudo borrar la lista") {
         deleteListUseCase(listId)
+    }
+
+    fun renameList(id: Int, name: String) = launchSafely("No se pudo renombrar la lista") {
+        renameListUseCase(id, name)
     }
 
     fun errorShown() {
