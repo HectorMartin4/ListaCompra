@@ -51,3 +51,9 @@ class RenameShoppingListUseCase(private val repository: ShoppingListRepository) 
     suspend operator fun invoke(listId: Int, name: String) =
         repository.renameList(listId, name.trim())
 }
+
+@Single
+class RestoreItemToListUseCase(private val repository: ShoppingListRepository) {
+    suspend operator fun invoke(listId: Int, itemId: Int, amount: Int, isChecked: Boolean) =
+        repository.restoreItemToList(listId, itemId, amount, isChecked)
+}

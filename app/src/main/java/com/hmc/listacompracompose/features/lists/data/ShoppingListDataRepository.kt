@@ -36,4 +36,12 @@ class ShoppingListDataRepository(
 
     override suspend fun renameList(listId: Int, name: String) =
         localDataSource.renameList(listId, name)
+
+    override suspend fun restoreItemToList(
+        listId: Int,
+        itemId: Int,
+        amount: Int,
+        isChecked: Boolean
+    ) =
+        localDataSource.restoreItemToList(listId, itemId, amount, isChecked)
 }

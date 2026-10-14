@@ -84,6 +84,7 @@ fun ItemListContent(
 ) {
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
     var itemToEdit by remember { mutableStateOf<ItemModel?>(null) }
+    var itemToDelete by remember { mutableStateOf<ItemModel?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val categoryNames = remember(state.categories) {
@@ -143,7 +144,7 @@ fun ItemListContent(
                                 item = item,
                                 categoryName = item.categoryId?.let { categoryNames[it] },
                                 onClick = { itemToEdit = item },
-                                onDelete = { onDelete(item) }
+                                onDelete = { itemToDelete = item }
                             )
                         }
                     }
@@ -177,6 +178,25 @@ fun ItemListContent(
             onConfirm = { name, price, categoryId ->
                 onEdit(item.copy(name = name, price = price, categoryId = categoryId))
                 itemToEdit = null
+            }
+        )
+    }
+
+    itemToDelete?.let { item ->
+        AlertDialog(
+            onDismissRequest = { itemToDelete = null },
+            title = { Text("Borrar producto") },
+            text = {
+                Text("Se borrará \"${item.name}\" del catálogo y desaparecerá de todas las listas donde esté.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDelete(item)
+                    itemToDelete = null
+                }) { Text("Borrar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { itemToDelete = null }) { Text("Cancelar") }
             }
         )
     }

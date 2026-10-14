@@ -23,7 +23,7 @@ fun UndoSnackbarEffect(
             val result = snackbarHostState.showSnackbar(
                 message = prompt.message,
                 actionLabel = "Deshacer",
-                duration = SnackbarDuration.Short
+                duration = SnackbarDuration.Long
             )
             if (result == SnackbarResult.ActionPerformed) onUndo()
             onPromptShown()
