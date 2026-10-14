@@ -5,6 +5,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.hmc.listacompracompose.features.data.local.db.entities.DEFAULT_SUPERMARKET_ID
 import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_CATEGORY
 import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_ITEM_NAME
+import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_PRICE_HISTORY
 import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_SHOPPING_LIST
 import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_SHOPPING_LIST_ITEM
 import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_SUPERMARKET
@@ -122,6 +123,75 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         // 6. Borrar las copias
         db.execSQL("DROP TABLE `_bak_category`")
         db.execSQL("DROP TABLE `_bak_list`")
+        db.execSQL("DROP TABLE `_bak_items`")
+        db.execSQL("DROP TABLE `_bak_list_item`")
+    }
+}
+
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        val items = TABLE_ITEM_NAME
+        val category = TABLE_CATEGORY
+        val list = TABLE_SHOPPING_LIST
+        val listItem = TABLE_SHOPPING_LIST_ITEM
+        val sm = TABLE_SUPERMARKET
+
+        // 1. Copias de seguridad
+        db.execSQL("CREATE TABLE `_bak_items` AS SELECT * FROM `$items`")
+        db.execSQL("CREATE TABLE `_bak_list_item` AS SELECT * FROM `$listItem`")
+
+        // 2. Borrar, de hija a padre, para que no salten cascadas
+        db.execSQL("DROP TABLE `$listItem`")
+        db.execSQL("DROP TABLE `$items`")
+
+        // 3. Crear de nuevo, de padre a hija
+        db.execSQL(
+            "CREATE TABLE `$items` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`name` TEXT NOT NULL, " +
+                    "`price` REAL, " +
+                    "`categoryId` INTEGER, " +
+                    "`supermarketId` INTEGER NOT NULL, " +
+                    "FOREIGN KEY(`categoryId`) REFERENCES `$category`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL, " +
+                    "FOREIGN KEY(`supermarketId`) REFERENCES `$sm`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)"
+        )
+        db.execSQL("CREATE INDEX `index_${items}_categoryId` ON `$items` (`categoryId`)")
+        db.execSQL("CREATE INDEX `index_${items}_supermarketId` ON `$items` (`supermarketId`)")
+
+        db.execSQL(
+            "CREATE TABLE `$listItem` (" +
+                    "`listId` INTEGER NOT NULL, " +
+                    "`itemId` INTEGER NOT NULL, " +
+                    "`amount` INTEGER NOT NULL, " +
+                    "`isChecked` INTEGER NOT NULL, " +
+                    "`paidPrice` REAL, " +
+                    "PRIMARY KEY(`listId`, `itemId`), " +
+                    "FOREIGN KEY(`listId`) REFERENCES `$list`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE, " +
+                    "FOREIGN KEY(`itemId`) REFERENCES `$items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)"
+        )
+        db.execSQL("CREATE INDEX `index_${listItem}_itemId` ON `$listItem` (`itemId`)")
+
+        db.execSQL(
+            "CREATE TABLE `$TABLE_PRICE_HISTORY` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`itemId` INTEGER NOT NULL, " +
+                    "`price` REAL NOT NULL, " +
+                    "`recordedAt` INTEGER NOT NULL, " +
+                    "FOREIGN KEY(`itemId`) REFERENCES `$items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)"
+        )
+        db.execSQL("CREATE INDEX `index_${TABLE_PRICE_HISTORY}_itemId` ON `$TABLE_PRICE_HISTORY` (`itemId`)")
+
+        // 4. Restaurar los datos, de padre a hija
+        db.execSQL(
+            "INSERT INTO `$items` (`id`, `name`, `price`, `categoryId`, `supermarketId`) " +
+                    "SELECT `id`, `name`, `price`, `categoryId`, `supermarketId` FROM `_bak_items`"
+        )
+        db.execSQL(
+            "INSERT INTO `$listItem` (`listId`, `itemId`, `amount`, `isChecked`) " +
+                    "SELECT `listId`, `itemId`, `amount`, `isChecked` FROM `_bak_list_item`"
+        )
+
+        // 5. Borrar las copias
         db.execSQL("DROP TABLE `_bak_items`")
         db.execSQL("DROP TABLE `_bak_list_item`")
     }

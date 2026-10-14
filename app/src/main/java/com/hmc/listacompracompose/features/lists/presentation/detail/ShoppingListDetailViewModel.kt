@@ -33,7 +33,8 @@ data class ListDetailUiState(
     val error: String? = null,
     val undo: UndoPrompt? = null
 ) {
-    val total: Double get() = items.sumOf { it.price * it.amount }
+    val total: Double get() = items.sumOf { (it.price ?: 0.0) * it.amount }
+    val itemsWithoutPrice: Int get() = items.count { it.price == null }
 }
 
 @KoinViewModel

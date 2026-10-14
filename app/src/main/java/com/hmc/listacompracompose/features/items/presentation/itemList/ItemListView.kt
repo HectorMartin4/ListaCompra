@@ -75,7 +75,7 @@ fun ItemListView(
 @Composable
 fun ItemListContent(
     state: ItemListUiState,
-    onAdd: (name: String, price: Double, categoryId: Int?) -> Unit,
+    onAdd: (name: String, price: Double?, categoryId: Int?) -> Unit,
     onDelete: (ItemModel) -> Unit,
     onEdit: (ItemModel) -> Unit,
     onErrorShown: () -> Unit,
@@ -226,7 +226,7 @@ fun CatalogItemRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = item.name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = "Precio habitual: ${"%.2f".format(item.price)} €",
+                    text = item.price?.let { "Precio habitual: %.2f €".format(it) } ?: "Sin precio",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -255,7 +255,7 @@ fun CatalogItemDialog(
     confirmText: String,
     categories: List<CategoryModel>,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, price: Double, categoryId: Int?) -> Unit,
+    onConfirm: (name: String, price: Double?, categoryId: Int?) -> Unit,
     initialName: String = "",
     initialPrice: Double? = null,
     initialCategoryId: Int? = null
@@ -264,6 +264,7 @@ fun CatalogItemDialog(
     var priceText by rememberSaveable {
         mutableStateOf(initialPrice?.let { "%.2f".format(it) } ?: "")
     }
+    // Si la categoría del producto ya no existe (se borró), se parte de "Sin categoría"
     var categoryId by rememberSaveable {
         mutableStateOf(initialCategoryId?.takeIf { id -> categories.any { it.id == id } })
     }
@@ -271,7 +272,7 @@ fun CatalogItemDialog(
 
     val price = priceText.replace(',', '.').toDoubleOrNull()
     val priceInvalid = priceText.isNotBlank() && (price == null || price < 0)
-    val canConfirm = name.isNotBlank() && price != null && price >= 0
+    val canConfirm = name.isNotBlank() && !priceInvalid
     val categoryName = categories.firstOrNull { it.id == categoryId }?.name ?: "Sin categoría"
 
     AlertDialog(
@@ -283,13 +284,13 @@ fun CatalogItemDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Nombre del producto") },
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                    singleLine = true
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
                 )
                 OutlinedTextField(
                     value = priceText,
                     onValueChange = { priceText = it },
-                    label = { Text("Precio base (€)") },
+                    label = { Text("Precio (opcional)") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     isError = priceInvalid,
@@ -329,7 +330,7 @@ fun CatalogItemDialog(
         confirmButton = {
             TextButton(
                 enabled = canConfirm,
-                onClick = { price?.let { onConfirm(name.trim(), it, categoryId) } }
+                onClick = { onConfirm(name.trim(), price, categoryId) }
             ) { Text(confirmText) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }

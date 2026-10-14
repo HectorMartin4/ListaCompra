@@ -8,6 +8,7 @@ import com.hmc.listacompracompose.features.data.local.db.dao.ShoppingListDao
 import com.hmc.listacompracompose.features.data.local.db.dao.SupermarketDao
 import com.hmc.listacompracompose.features.data.local.db.entities.CategoryEntity
 import com.hmc.listacompracompose.features.data.local.db.entities.ItemEntity
+import com.hmc.listacompracompose.features.data.local.db.entities.PriceHistoryEntity
 import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListEntity
 import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListItemEntity
 import com.hmc.listacompracompose.features.data.local.db.entities.SupermarketEntity
@@ -18,9 +19,10 @@ import com.hmc.listacompracompose.features.data.local.db.entities.SupermarketEnt
         ShoppingListEntity::class,
         ShoppingListItemEntity::class,
         CategoryEntity::class,
-        SupermarketEntity::class
+        SupermarketEntity::class,
+        PriceHistoryEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class ItemDatabase : RoomDatabase() {

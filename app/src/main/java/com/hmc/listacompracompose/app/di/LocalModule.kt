@@ -8,6 +8,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.hmc.listacompracompose.app.data.db.ItemDatabase
 import com.hmc.listacompracompose.app.data.db.MIGRATION_3_4
 import com.hmc.listacompracompose.app.data.db.MIGRATION_4_5
+import com.hmc.listacompracompose.app.data.db.MIGRATION_5_6
 import com.hmc.listacompracompose.features.data.local.db.entities.DEFAULT_SUPERMARKET_ID
 import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_SUPERMARKET
 import org.koin.core.annotation.Module
@@ -19,7 +20,7 @@ class LocalModule {
     @Single
     fun provideRoom(context: Context): ItemDatabase {
         val builder = Room.databaseBuilder(context, ItemDatabase::class.java, "shopping-list-db")
-            .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     db.execSQL(

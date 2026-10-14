@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hmc.listacompracompose.app.util.formatPrice
 import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.lists.domain.ListItemModel
 import com.hmc.listacompracompose.ui.components.UndoSnackbarEffect
@@ -126,14 +127,32 @@ fun ShoppingListDetailContent(
         bottomBar = {
             if (state.items.isNotEmpty()) {
                 Surface(tonalElevation = 3.dp) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .padding(16.dp)
                     ) {
-                        Text("Total", style = MaterialTheme.typography.titleMedium)
-                        Text("%.2f €".format(state.total), style = MaterialTheme.typography.titleMedium)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Total", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "%.2f €".format(state.total),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                        if (state.itemsWithoutPrice > 0) {
+                            Text(
+                                text = if (state.itemsWithoutPrice == 1) {
+                                    "1 producto sin precio"
+                                } else {
+                                    "${state.itemsWithoutPrice} productos sin precio"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -218,7 +237,8 @@ fun ListItemRow(
                     textDecoration = if (item.isChecked) TextDecoration.LineThrough else null
                 )
                 Text(
-                    text = "%.2f € × %d".format(item.price, item.amount),
+                    text = item.price?.let { "%.2f € × %d".format(it, item.amount) }
+                        ?: "Sin precio × ${item.amount}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -267,7 +287,7 @@ fun CatalogPickerSheet(
                 items(items = catalogItems, key = { it.id }) { item ->
                     ListItem(
                         headlineContent = { Text(item.name) },
-                        supportingContent = { Text("%.2f €".format(item.price)) },
+                        supportingContent = { Text(item.price.formatPrice()) },
                         trailingContent = { Icon(Icons.Default.Add, contentDescription = "Añadir") },
                         modifier = Modifier.clickable { onPick(item) }
                     )
