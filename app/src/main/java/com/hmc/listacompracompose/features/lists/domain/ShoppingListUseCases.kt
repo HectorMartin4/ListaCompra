@@ -1,5 +1,6 @@
 package com.hmc.listacompracompose.features.lists.domain
 
+import com.hmc.listacompracompose.app.util.normalizeName
 import kotlinx.coroutines.flow.Flow
 import org.koin.core.annotation.Single
 
@@ -10,7 +11,7 @@ class ObserveShoppingListsUseCase(private val repository: ShoppingListRepository
 
 @Single
 class CreateShoppingListUseCase(private val repository: ShoppingListRepository) {
-    suspend operator fun invoke(name: String) = repository.createList(name.trim())
+    suspend operator fun invoke(name: String) = repository.createList(name.normalizeName())
 }
 
 @Single
@@ -49,7 +50,7 @@ class SetItemAmountUseCase(private val repository: ShoppingListRepository) {
 @Single
 class RenameShoppingListUseCase(private val repository: ShoppingListRepository) {
     suspend operator fun invoke(listId: Int, name: String) =
-        repository.renameList(listId, name.trim())
+        repository.renameList(listId, name.normalizeName())
 }
 
 @Single

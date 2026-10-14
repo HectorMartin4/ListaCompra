@@ -1,5 +1,6 @@
 package com.hmc.listacompracompose.features.categories.domain
 
+import com.hmc.listacompracompose.app.util.normalizeName
 import kotlinx.coroutines.flow.Flow
 import org.koin.core.annotation.Single
 
@@ -10,12 +11,13 @@ class ObserveCategoriesUseCase(private val repository: CategoryRepository) {
 
 @Single
 class CreateCategoryUseCase(private val repository: CategoryRepository) {
-    suspend operator fun invoke(name: String) = repository.createCategory(name.trim())
+    suspend operator fun invoke(name: String) = repository.createCategory(name.normalizeName())
 }
 
 @Single
 class RenameCategoryUseCase(private val repository: CategoryRepository) {
-    suspend operator fun invoke(id: Int, name: String) = repository.renameCategory(id, name.trim())
+    suspend operator fun invoke(id: Int, name: String) =
+        repository.renameCategory(id, name.normalizeName())
 }
 
 @Single
