@@ -1,6 +1,9 @@
 package com.hmc.listacompracompose.features.lists.presentation.detail
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,19 +15,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -33,6 +43,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +54,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -52,6 +65,7 @@ import com.hmc.listacompracompose.app.util.groupByCategory
 import com.hmc.listacompracompose.features.categories.domain.CategoryModel
 import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.lists.domain.ListItemModel
+import com.hmc.listacompracompose.features.lists.presentation.ListNameDialog
 import com.hmc.listacompracompose.ui.components.CategoryHeader
 import com.hmc.listacompracompose.ui.components.SearchField
 import com.hmc.listacompracompose.ui.components.UndoSnackbarEffect
@@ -70,6 +84,7 @@ fun ShoppingListDetailView(
     ShoppingListDetailContent(
         state = state,
         onBack = onBack,
+        onModeChange = viewModel::setMode,
         onOpenPicker = viewModel::openPicker,
         onClosePicker = viewModel::closePicker,
         onPick = { viewModel.addItem(it.id) },
@@ -78,6 +93,8 @@ fun ShoppingListDetailView(
         onRemove = viewModel::removeItem,
         onUndo = viewModel::undoRemove,
         onUndoShown = viewModel::undoShown,
+        onRename = viewModel::renameList,
+        onDeleteList = { viewModel.deleteList(onSuccess = onBack) },
         onErrorShown = viewModel::errorShown
     )
 }
@@ -87,6 +104,7 @@ fun ShoppingListDetailView(
 fun ShoppingListDetailContent(
     state: ListDetailUiState,
     onBack: () -> Unit,
+    onModeChange: (ListMode) -> Unit,
     onOpenPicker: () -> Unit,
     onClosePicker: () -> Unit,
     onPick: (ItemModel) -> Unit,
@@ -95,11 +113,16 @@ fun ShoppingListDetailContent(
     onRemove: (ListItemModel) -> Unit,
     onUndo: () -> Unit,
     onUndoShown: () -> Unit,
+    onRename: (String) -> Unit,
+    onDeleteList: () -> Unit,
     onErrorShown: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    val groups = remember(state.items) { state.items.groupBy { it.categoryId } }
+    var menuExpanded by remember { mutableStateOf(false) }
+    var showRenameDialog by rememberSaveable { mutableStateOf(false) }
+    var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(state.error) {
         state.error?.let { message ->
@@ -125,13 +148,34 @@ fun ShoppingListDetailContent(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
+                actions = {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Renombrar") },
+                            onClick = { menuExpanded = false; showRenameDialog = true }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Borrar") },
+                            onClick = { menuExpanded = false; showDeleteDialog = true }
+                        )
+                    }
+                },
                 colors = appTopBarColors()
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(onClick = onOpenPicker) {
-                Icon(Icons.Default.Add, contentDescription = "Añadir productos")
+            // En lista vacía siempre mostramos el FAB; si hay items, solo en modo EDICION
+            if (state.items.isEmpty() || state.mode == ListMode.EDICION) {
+                FloatingActionButton(onClick = onOpenPicker) {
+                    Icon(Icons.Default.Add, contentDescription = "Añadir productos")
+                }
             }
         },
         bottomBar = {
@@ -152,12 +196,14 @@ fun ShoppingListDetailContent(
                                 style = MaterialTheme.typography.titleMedium
                             )
                         }
-                        if (state.itemsWithoutPrice > 0) {
+                        val checkedWithoutPrice =
+                            state.items.count { it.isChecked && it.price == null }
+                        if (checkedWithoutPrice > 0) {
                             Text(
-                                text = if (state.itemsWithoutPrice == 1) {
-                                    "1 producto sin precio"
+                                text = if (checkedWithoutPrice == 1) {
+                                    "1 producto comprado sin precio"
                                 } else {
-                                    "${state.itemsWithoutPrice} productos sin precio"
+                                    "$checkedWithoutPrice productos comprados sin precio"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -184,26 +230,122 @@ fun ShoppingListDetailContent(
                     )
                 }
                 else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 16.dp, top = 8.dp, end = 16.dp, bottom = 88.dp
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        groups.forEach { (categoryId, groupItems) ->
-                            stickyHeader(key = "header-${categoryId ?: "none"}") {
-                                CategoryHeader(
-                                    name = groupItems.first().categoryName ?: "Sin categoría"
+                    val filtered = state.items.filterByQuery(query) { it.name }
+                    val unchecked = filtered.filter { !it.isChecked }
+                    val checkedItems = filtered.filter { it.isChecked }
+                    val uncheckedGroups =
+                        remember(unchecked) { unchecked.groupBy { it.categoryId } }
+                    val totalCount = state.items.size
+                    val checkedCount = state.items.count { it.isChecked }
+
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                            shape = RoundedCornerShape(24.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                FilterChip(
+                                    selected = state.mode == ListMode.COMPRA,
+                                    onClick = { onModeChange(ListMode.COMPRA) },
+                                    label = { Text("Comprar") },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(20.dp)
+                                )
+                                FilterChip(
+                                    selected = state.mode == ListMode.EDICION,
+                                    onClick = { onModeChange(ListMode.EDICION) },
+                                    label = { Text("Editar") },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(20.dp)
                                 )
                             }
-                            items(items = groupItems, key = { it.itemId }) { item ->
-                                ListItemRow(
-                                    item = item,
-                                    onCheckedChange = { onCheckedChange(item.itemId, it) },
-                                    onAmountChange = { onAmountChange(item.itemId, it) },
-                                    onRemove = { onRemove(item) }
-                                )
+                        }
+                        SearchField(
+                            query = query,
+                            onQueryChange = { query = it },
+                            placeholder = "Buscar producto…",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                        LinearProgressIndicator(
+                            progress = { if (totalCount > 0) checkedCount.toFloat() / totalCount else 0f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            drawStopIndicator = {}
+                        )
+
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp, top = 8.dp, end = 16.dp, bottom = 88.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (uncheckedGroups.isNotEmpty()) {
+                                stickyHeader(key = "header-por-comprar") {
+                                    Text(
+                                        text = "Por comprar",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(bottom = 4.dp)
+                                    )
+                                }
+                                uncheckedGroups.forEach { (categoryId, groupItems) ->
+                                    stickyHeader(key = "header-cat-${categoryId ?: "none"}") {
+                                        CategoryHeader(
+                                            name = groupItems.first().categoryName
+                                                ?: "Sin categoría"
+                                        )
+                                    }
+                                    items(items = groupItems, key = { it.itemId }) { item ->
+                                        ListItemRow(
+                                            item = item,
+                                            mode = state.mode,
+                                            onCheckedChange = { onCheckedChange(item.itemId, it) },
+                                            onAmountChange = { onAmountChange(item.itemId, it) },
+                                            onRemove = { onRemove(item) },
+                                            modifier = Modifier.animateItem()
+                                        )
+                                    }
+                                }
+                            }
+                            if (checkedItems.isNotEmpty()) {
+                                stickyHeader(key = "header-comprados") {
+                                    Text(
+                                        text = "Comprados (${checkedItems.size})",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(bottom = 4.dp)
+                                    )
+                                }
+                                items(items = checkedItems, key = { it.itemId }) { prod ->
+                                    ListItemRow(
+                                        item = prod,
+                                        mode = state.mode,
+                                        onCheckedChange = { onCheckedChange(prod.itemId, it) },
+                                        onAmountChange = { onAmountChange(prod.itemId, it) },
+                                        onRemove = { onRemove(prod) },
+                                        modifier = Modifier.animateItem()
+                                    )
+                                }
+                            }
+                            if (filtered.isEmpty()) {
+                                item {
+                                    Text(
+                                        text = if (state.items.isEmpty()) {
+                                            "Esta lista está vacía.\nPulsa + para añadir productos del catálogo."
+                                        } else {
+                                            "No hay productos que coincidan con \"$query\"."
+                                        },
+                                        modifier = Modifier.padding(16.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -220,18 +362,61 @@ fun ShoppingListDetailContent(
             onDismiss = onClosePicker
         )
     }
+
+    if (showRenameDialog) {
+        ListNameDialog(
+            title = "Renombrar lista",
+            confirmText = "Guardar",
+            initialName = state.listName,
+            onDismiss = { showRenameDialog = false },
+            onConfirm = { onRename(it); showRenameDialog = false }
+        )
+    }
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Borrar lista") },
+            text = { Text("Se borrará \"${state.listName}\" con todos sus productos. Los productos del catálogo no se borran.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteList(); showDeleteDialog = false
+                }) { Text("Borrar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
 }
 
 @Composable
 fun ListItemRow(
     item: ListItemModel,
+    mode: ListMode,
     onCheckedChange: (Boolean) -> Unit,
     onAmountChange: (Int) -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+
+    // Animación de opacidad suave cuando está checked
+    val alpha by animateFloatAsState(
+        targetValue = if (item.isChecked) 0.5f else 1f,
+        label = "alphaAnimation"
+    )
+
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .alpha(alpha)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                color = if (item.isChecked) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                } else {
+                    MaterialTheme.colorScheme.surface
+                }
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -242,34 +427,53 @@ fun ListItemRow(
         ) {
             Checkbox(checked = item.isChecked, onCheckedChange = onCheckedChange)
             Column(modifier = Modifier.weight(1f)) {
+                Crossfade(
+                    targetState = item.isChecked,
+                    label = "strikethroughCrossfade"
+                ) { checked ->
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textDecoration = if (checked) TextDecoration.LineThrough else null
+                    )
+                }
+                if (mode == ListMode.COMPRA) {
+                    Text(
+                        text = "× ${item.amount}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    )
+                }
                 Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    textDecoration = if (item.isChecked) TextDecoration.LineThrough else null
-                )
-                Text(
-                    text = item.price?.let { "%.2f € × %d".format(it, item.amount) }
-                        ?: "Sin precio × ${item.amount}",
+                    text = item.price?.let { "%.2f €".format(it) } ?: "Sin precio",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = { onAmountChange(item.amount - 1) },
-                        enabled = item.amount > 1
-                    ) { Text("−", style = MaterialTheme.typography.titleLarge) }
-                    Text("${item.amount}", style = MaterialTheme.typography.bodyLarge)
-                    IconButton(onClick = { onAmountChange(item.amount + 1) }) {
-                        Text("+", style = MaterialTheme.typography.titleLarge)
+                if (mode == ListMode.EDICION) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { onAmountChange(item.amount - 1) },
+                            enabled = item.amount > 1
+                        ) { Text("−", style = MaterialTheme.typography.titleLarge) }
+                        Text(
+                            text = "${item.amount}",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        IconButton(onClick = { onAmountChange(item.amount + 1) }) {
+                            Text("+", style = MaterialTheme.typography.titleLarge)
+                        }
                     }
                 }
             }
-            IconButton(onClick = onRemove) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Quitar de la lista",
-                    tint = MaterialTheme.colorScheme.error
-                )
+            if (mode == ListMode.EDICION) {
+                IconButton(onClick = onRemove) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Quitar de la lista",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }
