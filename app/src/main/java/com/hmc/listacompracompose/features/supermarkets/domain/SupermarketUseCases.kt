@@ -1,5 +1,6 @@
 package com.hmc.listacompracompose.features.supermarkets.domain
 
+import com.hmc.listacompracompose.app.util.normalizeName
 import kotlinx.coroutines.flow.Flow
 import org.koin.core.annotation.Single
 
@@ -21,7 +22,7 @@ class SetActiveSupermarketUseCase(private val repository: SupermarketRepository)
 @Single
 class CreateSupermarketUseCase(private val repository: SupermarketRepository) {
     suspend operator fun invoke(name: String) {
-        val id = repository.createSupermarket(name.trim())
+        val id = repository.createSupermarket(name.normalizeName())
         repository.setActiveSupermarket(id)
     }
 }
@@ -29,7 +30,7 @@ class CreateSupermarketUseCase(private val repository: SupermarketRepository) {
 @Single
 class RenameSupermarketUseCase(private val repository: SupermarketRepository) {
     suspend operator fun invoke(id: Int, name: String) =
-        repository.renameSupermarket(id, name.trim())
+        repository.renameSupermarket(id, name.normalizeName())
 }
 
 @Single

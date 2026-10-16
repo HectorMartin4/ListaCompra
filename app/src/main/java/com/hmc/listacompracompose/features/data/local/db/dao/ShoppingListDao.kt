@@ -49,4 +49,7 @@ interface ShoppingListDao {
 
     @Query("UPDATE $TABLE_SHOPPING_LIST_ITEM SET amount = :amount WHERE listId = :listId AND itemId = :itemId")
     suspend fun setAmount(listId: Int, itemId: Int, amount: Int)
+
+    @Query("UPDATE $TABLE_SHOPPING_LIST SET name = :name WHERE id = :listId")
+    suspend fun renameList(listId: Int, name: String)
 }

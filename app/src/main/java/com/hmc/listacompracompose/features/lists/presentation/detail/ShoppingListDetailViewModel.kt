@@ -5,9 +5,22 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hmc.listacompracompose.features.items.domain.GetItemListUseCase
 import com.hmc.listacompracompose.features.items.domain.ItemModel
-import com.hmc.listacompracompose.features.lists.domain.*
+import com.hmc.listacompracompose.features.lists.domain.AddItemToListUseCase
+import com.hmc.listacompracompose.features.lists.domain.ListItemModel
+import com.hmc.listacompracompose.features.lists.domain.ObserveListItemsUseCase
+import com.hmc.listacompracompose.features.lists.domain.ObserveShoppingListsUseCase
+import com.hmc.listacompracompose.features.lists.domain.RemoveItemFromListUseCase
+import com.hmc.listacompracompose.features.lists.domain.RestoreItemToListUseCase
+import com.hmc.listacompracompose.features.lists.domain.SetItemAmountUseCase
+import com.hmc.listacompracompose.features.lists.domain.SetItemCheckedUseCase
+import com.hmc.listacompracompose.ui.components.UndoPrompt
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
@@ -17,7 +30,8 @@ data class ListDetailUiState(
     val items: List<ListItemModel> = emptyList(),
     val pickerItems: List<ItemModel>? = null,
     val isLoading: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    val undo: UndoPrompt? = null
 ) {
     val total: Double get() = items.sumOf { it.price * it.amount }
 }
@@ -31,11 +45,14 @@ class ShoppingListDetailViewModel(
     private val addItemToListUseCase: AddItemToListUseCase,
     private val removeItemFromListUseCase: RemoveItemFromListUseCase,
     private val setItemCheckedUseCase: SetItemCheckedUseCase,
-    private val setItemAmountUseCase: SetItemAmountUseCase
+    private val setItemAmountUseCase: SetItemAmountUseCase,
+    private val restoreItemToListUseCase: RestoreItemToListUseCase
 ) : ViewModel() {
 
     private val _catalog = MutableStateFlow<List<ItemModel>?>(null)
     private val _error = MutableStateFlow<String?>(null)
+    private val _undo = MutableStateFlow<UndoPrompt?>(null)
+    private var lastRemoved: ListItemModel? = null
 
     val uiState: StateFlow<ListDetailUiState> = combine(
         observeListsUseCase(),
@@ -45,15 +62,17 @@ class ShoppingListDetailViewModel(
             emit(emptyList())
         },
         _catalog,
-        _error
-    ) { lists, items, catalog, error ->
+        _error,
+        _undo
+    ) { lists, items, catalog, error, undo ->
         val idsInList = items.map { it.itemId }.toSet()
         ListDetailUiState(
             listName = lists.firstOrNull { it.id == listId }?.name.orEmpty(),
             items = items,
             pickerItems = catalog?.filter { it.id !in idsInList },
             isLoading = false,
-            error = error
+            error = error,
+            undo = undo
         )
     }.stateIn(
         scope = viewModelScope,
@@ -73,8 +92,21 @@ class ShoppingListDetailViewModel(
         addItemToListUseCase(listId, itemId)
     }
 
-    fun removeItem(itemId: Int) = launchSafely("No se pudo quitar el producto") {
-        removeItemFromListUseCase(listId, itemId)
+    fun removeItem(item: ListItemModel) = launchSafely("No se pudo quitar el producto") {
+        removeItemFromListUseCase(listId, item.itemId)
+        lastRemoved = item
+        _undo.value = UndoPrompt("\"${item.name}\" quitado de la lista")
+    }
+
+    fun undoRemove() = launchSafely("No se pudo deshacer") {
+        lastRemoved?.let {
+            restoreItemToListUseCase(listId, it.itemId, it.amount, it.isChecked)
+        }
+        lastRemoved = null
+    }
+
+    fun undoShown() {
+        _undo.value = null
     }
 
     fun setChecked(itemId: Int, checked: Boolean) = launchSafely("No se pudo actualizar el producto") {

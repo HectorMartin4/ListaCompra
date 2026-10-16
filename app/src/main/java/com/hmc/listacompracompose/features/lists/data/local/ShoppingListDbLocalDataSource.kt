@@ -46,4 +46,18 @@ class ShoppingListDbLocalDataSource(
 
     suspend fun setAmount(listId: Int, itemId: Int, amount: Int) =
         dao.setAmount(listId, itemId, amount)
+
+    suspend fun renameList(listId: Int, name: String) =
+        dao.renameList(listId, name)
+
+    suspend fun restoreItemToList(listId: Int, itemId: Int, amount: Int, isChecked: Boolean) {
+        dao.addItemToList(
+            ShoppingListItemEntity(
+                listId = listId,
+                itemId = itemId,
+                amount = amount,
+                isChecked = isChecked
+            )
+        )
+    }
 }

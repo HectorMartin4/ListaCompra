@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.lists.domain.ListItemModel
+import com.hmc.listacompracompose.ui.components.UndoSnackbarEffect
 import com.hmc.listacompracompose.ui.theme.appTopBarColors
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -64,6 +65,8 @@ fun ShoppingListDetailView(
         onCheckedChange = viewModel::setChecked,
         onAmountChange = viewModel::setAmount,
         onRemove = viewModel::removeItem,
+        onUndo = viewModel::undoRemove,
+        onUndoShown = viewModel::undoShown,
         onErrorShown = viewModel::errorShown
     )
 }
@@ -78,7 +81,9 @@ fun ShoppingListDetailContent(
     onPick: (ItemModel) -> Unit,
     onCheckedChange: (itemId: Int, checked: Boolean) -> Unit,
     onAmountChange: (itemId: Int, amount: Int) -> Unit,
-    onRemove: (itemId: Int) -> Unit,
+    onRemove: (ListItemModel) -> Unit,
+    onUndo: () -> Unit,
+    onUndoShown: () -> Unit,
     onErrorShown: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -91,6 +96,13 @@ fun ShoppingListDetailContent(
             onErrorShown()
         }
     }
+
+    UndoSnackbarEffect(
+        prompt = state.undo,
+        snackbarHostState = snackbarHostState,
+        onUndo = onUndo,
+        onPromptShown = onUndoShown
+    )
 
     Scaffold(
         modifier = modifier,
@@ -161,7 +173,7 @@ fun ShoppingListDetailContent(
                                     item = item,
                                     onCheckedChange = { onCheckedChange(item.itemId, it) },
                                     onAmountChange = { onAmountChange(item.itemId, it) },
-                                    onRemove = { onRemove(item.itemId) }
+                                    onRemove = { onRemove(item) }
                                 )
                             }
                         }
