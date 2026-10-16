@@ -1,5 +1,6 @@
 package com.hmc.listacompracompose.features.items.presentation.itemList
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,9 +47,13 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hmc.listacompracompose.app.util.filterByQuery
+import com.hmc.listacompracompose.app.util.groupByCategory
 import com.hmc.listacompracompose.features.categories.domain.CategoryModel
 import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.supermarkets.presentation.SupermarketSelector
+import com.hmc.listacompracompose.ui.components.CategoryHeader
+import com.hmc.listacompracompose.ui.components.SearchField
 import com.hmc.listacompracompose.ui.theme.appTopBarColors
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -71,25 +76,30 @@ fun ItemListView(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ItemListContent(
     state: ItemListUiState,
     onAdd: (name: String, price: Double?, categoryId: Int?) -> Unit,
-    onDelete: (ItemModel) -> Unit,
     onEdit: (ItemModel) -> Unit,
-    onErrorShown: () -> Unit,
+    onDelete: (ItemModel) -> Unit,
+    onOpenCategories: () -> Unit,
     onManageSupermarkets: () -> Unit,
-    modifier: Modifier = Modifier,
-    onOpenCategories: () -> Unit
+    onErrorShown: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
     var itemToEdit by remember { mutableStateOf<ItemModel?>(null) }
     var itemToDelete by remember { mutableStateOf<ItemModel?>(null) }
+    var query by rememberSaveable { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val categoryNames = remember(state.categories) {
-        state.categories.associate { it.id to it.name }
+    val groups = remember(state.itemList, state.categories, query) {
+        groupByCategory(
+            items = state.itemList.filterByQuery(query) { it.name },
+            categories = state.categories,
+            categoryIdOf = { it.categoryId }
+        )
     }
 
     LaunchedEffect(state.error) {
@@ -117,36 +127,68 @@ fun ItemListContent(
             }
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when {
-                state.isLoading && state.itemList.isEmpty() -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-                state.itemList.isEmpty() -> {
-                    Text(
-                        text = "Tu catálogo está vacío.\nPulsa + para añadir un producto.",
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 16.dp, top = 16.dp, end = 16.dp, bottom = 88.dp
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(items = state.itemList, key = { it.id }) { item ->
-                            CatalogItemRow(
-                                item = item,
-                                categoryName = item.categoryId?.let { categoryNames[it] },
-                                onClick = { itemToEdit = item },
-                                onDelete = { itemToDelete = item }
-                            )
+            if (state.itemList.isNotEmpty()) {
+                SearchField(
+                    query = query,
+                    onQueryChange = { query = it },
+                    placeholder = "Buscar producto",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                when {
+                    state.isLoading && state.itemList.isEmpty() -> {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    }
+
+                    state.itemList.isEmpty() -> {
+                        Text(
+                            text = "Tu catálogo está vacío.\nPulsa + para añadir un producto.",
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+
+                    groups.isEmpty() -> {
+                        Text(
+                            text = "No hay productos que coincidan con \"$query\".",
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(16.dp)
+                        )
+                    }
+
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp, top = 8.dp, end = 16.dp, bottom = 88.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            groups.forEach { group ->
+                                stickyHeader(key = "header-${group.categoryId ?: "none"}") {
+                                    CategoryHeader(name = group.title)
+                                }
+                                items(items = group.items, key = { it.id }) { item ->
+                                    CatalogItemRow(
+                                        item = item,
+                                        onClick = { itemToEdit = item },
+                                        onDelete = { itemToDelete = item }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -206,7 +248,6 @@ fun ItemListContent(
 @Composable
 fun CatalogItemRow(
     item: ItemModel,
-    categoryName: String?,
     onClick: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
@@ -230,13 +271,6 @@ fun CatalogItemRow(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                categoryName?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
             }
             IconButton(onClick = onDelete) {
                 Icon(
