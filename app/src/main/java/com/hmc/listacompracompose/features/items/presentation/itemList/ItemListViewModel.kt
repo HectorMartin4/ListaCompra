@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.hmc.listacompracompose.features.categories.domain.CategoryModel
 import com.hmc.listacompracompose.features.categories.domain.ObserveCategoriesUseCase
 import com.hmc.listacompracompose.features.items.domain.DeleteItemUseCase
-import com.hmc.listacompracompose.features.items.domain.GetItemListUseCase
 import com.hmc.listacompracompose.features.items.domain.InsertItemUseCase
 import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.items.domain.ObserveItemListUseCase
@@ -63,7 +62,7 @@ class ItemListViewModel(
         initialValue = ItemListUiState(isLoading = true)
     )
 
-    fun addItem(name: String, price: Double, categoryId: Int?) =
+    fun addItem(name: String, price: Double?, categoryId: Int?) =
         launchSafely("No se pudo guardar el producto") {
             val newItem = ItemModel(name = name.trim(), price = price, categoryId = categoryId)
             if (!insertItemUseCase(newItem)) {

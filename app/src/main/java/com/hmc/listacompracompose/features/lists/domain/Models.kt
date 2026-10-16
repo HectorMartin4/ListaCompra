@@ -8,7 +8,7 @@ data class ShoppingListModel(
 data class ListItemModel(
     val itemId: Int,
     val name: String,
-    val price: Double,
+    val price: Double?,
     val amount: Int,
     val isChecked: Boolean,
     val categoryId: Int? = null,

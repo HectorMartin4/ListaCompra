@@ -49,13 +49,14 @@ data class ShoppingListItemEntity(
     val listId: Int,
     val itemId: Int,
     val amount: Int = 1,
-    val isChecked: Boolean = false
+    val isChecked: Boolean = false,
+    val paidPrice: Double? = null
 )
 
 data class ListItemRow(
     val itemId: Int,
     val name: String,
-    val price: Double,
+    val price: Double?,
     val amount: Int,
     val isChecked: Boolean,
     val categoryId: Int?,

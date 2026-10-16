@@ -3,6 +3,8 @@ package com.hmc.listacompracompose.features.lists.presentation.detail
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hmc.listacompracompose.features.categories.domain.CategoryModel
+import com.hmc.listacompracompose.features.categories.domain.ObserveCategoriesUseCase
 import com.hmc.listacompracompose.features.items.domain.GetItemListUseCase
 import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.lists.domain.AddItemToListUseCase
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.InjectedParam
@@ -28,13 +31,19 @@ import org.koin.core.annotation.KoinViewModel
 data class ListDetailUiState(
     val listName: String = "",
     val items: List<ListItemModel> = emptyList(),
-    val pickerItems: List<ItemModel>? = null,
+    val picker: PickerData? = null,
     val isLoading: Boolean = true,
     val error: String? = null,
     val undo: UndoPrompt? = null
 ) {
-    val total: Double get() = items.sumOf { it.price * it.amount }
+    val total: Double get() = items.sumOf { (it.price ?: 0.0) * it.amount }
+    val itemsWithoutPrice: Int get() = items.count { it.price == null }
 }
+
+data class PickerData(
+    val items: List<ItemModel>,
+    val categories: List<CategoryModel>
+)
 
 @KoinViewModel
 class ShoppingListDetailViewModel(
@@ -46,10 +55,11 @@ class ShoppingListDetailViewModel(
     private val removeItemFromListUseCase: RemoveItemFromListUseCase,
     private val setItemCheckedUseCase: SetItemCheckedUseCase,
     private val setItemAmountUseCase: SetItemAmountUseCase,
-    private val restoreItemToListUseCase: RestoreItemToListUseCase
+    private val restoreItemToListUseCase: RestoreItemToListUseCase,
+    private val observeCategoriesUseCase: ObserveCategoriesUseCase
 ) : ViewModel() {
 
-    private val _catalog = MutableStateFlow<List<ItemModel>?>(null)
+    private val _picker = MutableStateFlow<PickerData?>(null)
     private val _error = MutableStateFlow<String?>(null)
     private val _undo = MutableStateFlow<UndoPrompt?>(null)
     private var lastRemoved: ListItemModel? = null
@@ -61,15 +71,15 @@ class ShoppingListDetailViewModel(
             _error.value = "No se pudo cargar la lista"
             emit(emptyList())
         },
-        _catalog,
+        _picker,
         _error,
         _undo
-    ) { lists, items, catalog, error, undo ->
+    ) { lists, items, picker, error, undo ->
         val idsInList = items.map { it.itemId }.toSet()
         ListDetailUiState(
             listName = lists.firstOrNull { it.id == listId }?.name.orEmpty(),
             items = items,
-            pickerItems = catalog?.filter { it.id !in idsInList },
+            picker = picker?.copy(items = picker.items.filter { it.id !in idsInList }),
             isLoading = false,
             error = error,
             undo = undo
@@ -81,11 +91,14 @@ class ShoppingListDetailViewModel(
     )
 
     fun openPicker() = launchSafely("No se pudo cargar el catálogo") {
-        _catalog.value = getItemListUseCase()
+        _picker.value = PickerData(
+            items = getItemListUseCase(),
+            categories = observeCategoriesUseCase().first()
+        )
     }
 
     fun closePicker() {
-        _catalog.value = null
+        _picker.value = null
     }
 
     fun addItem(itemId: Int) = launchSafely("No se pudo añadir el producto") {

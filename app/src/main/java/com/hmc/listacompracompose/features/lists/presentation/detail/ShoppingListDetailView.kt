@@ -1,5 +1,6 @@
 package com.hmc.listacompracompose.features.lists.presentation.detail
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -35,14 +37,23 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hmc.listacompracompose.app.util.filterByQuery
+import com.hmc.listacompracompose.app.util.formatPrice
+import com.hmc.listacompracompose.app.util.groupByCategory
+import com.hmc.listacompracompose.features.categories.domain.CategoryModel
 import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.lists.domain.ListItemModel
+import com.hmc.listacompracompose.ui.components.CategoryHeader
+import com.hmc.listacompracompose.ui.components.SearchField
 import com.hmc.listacompracompose.ui.components.UndoSnackbarEffect
 import com.hmc.listacompracompose.ui.theme.appTopBarColors
 import org.koin.compose.viewmodel.koinViewModel
@@ -126,14 +137,32 @@ fun ShoppingListDetailContent(
         bottomBar = {
             if (state.items.isNotEmpty()) {
                 Surface(tonalElevation = 3.dp) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .padding(16.dp)
                     ) {
-                        Text("Total", style = MaterialTheme.typography.titleMedium)
-                        Text("%.2f €".format(state.total), style = MaterialTheme.typography.titleMedium)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Total", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "%.2f €".format(state.total),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                        if (state.itemsWithoutPrice > 0) {
+                            Text(
+                                text = if (state.itemsWithoutPrice == 1) {
+                                    "1 producto sin precio"
+                                } else {
+                                    "${state.itemsWithoutPrice} productos sin precio"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -183,9 +212,10 @@ fun ShoppingListDetailContent(
         }
     }
 
-    state.pickerItems?.let { catalogItems ->
+    state.picker?.let { picker ->
         CatalogPickerSheet(
-            catalogItems = catalogItems,
+            catalogItems = picker.items,
+            categories = picker.categories,
             onPick = onPick,
             onDismiss = onClosePicker
         )
@@ -218,7 +248,8 @@ fun ListItemRow(
                     textDecoration = if (item.isChecked) TextDecoration.LineThrough else null
                 )
                 Text(
-                    text = "%.2f € × %d".format(item.price, item.amount),
+                    text = item.price?.let { "%.2f € × %d".format(it, item.amount) }
+                        ?: "Sin precio × ${item.amount}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -244,13 +275,23 @@ fun ListItemRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CatalogPickerSheet(
     catalogItems: List<ItemModel>,
+    categories: List<CategoryModel>,
     onPick: (ItemModel) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val groups = remember(catalogItems, categories, query) {
+        groupByCategory(
+            items = catalogItems.filterByQuery(query) { it.name },
+            categories = categories,
+            categoryIdOf = { it.categoryId }
+        )
+    }
+
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Text(
             text = "Añadir desde el catálogo",
@@ -263,31 +304,42 @@ fun CatalogPickerSheet(
                 modifier = Modifier.padding(16.dp)
             )
         } else {
-            LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
-                items(items = catalogItems, key = { it.id }) { item ->
-                    ListItem(
-                        headlineContent = { Text(item.name) },
-                        supportingContent = { Text("%.2f €".format(item.price)) },
-                        trailingContent = { Icon(Icons.Default.Add, contentDescription = "Añadir") },
-                        modifier = Modifier.clickable { onPick(item) }
-                    )
+            SearchField(
+                query = query,
+                onQueryChange = { query = it },
+                placeholder = "Buscar producto",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            if (groups.isEmpty()) {
+                Text(
+                    text = "No hay productos que coincidan con \"$query\".",
+                    modifier = Modifier.padding(16.dp)
+                )
+            } else {
+                LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+                    groups.forEach { group ->
+                        stickyHeader(key = "header-${group.categoryId ?: "none"}") {
+                            CategoryHeader(
+                                name = group.title,
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                containerColor = BottomSheetDefaults.ContainerColor
+                            )
+                        }
+                        items(items = group.items, key = { it.id }) { item ->
+                            ListItem(
+                                headlineContent = { Text(item.name) },
+                                supportingContent = { Text(item.price.formatPrice()) },
+                                trailingContent = {
+                                    Icon(Icons.Default.Add, contentDescription = "Añadir")
+                                },
+                                modifier = Modifier.clickable { onPick(item) }
+                            )
+                        }
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun CategoryHeader(name: String, modifier: Modifier = Modifier) {
-    Surface(
-        color = MaterialTheme.colorScheme.background,
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Text(
-            text = name,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
     }
 }

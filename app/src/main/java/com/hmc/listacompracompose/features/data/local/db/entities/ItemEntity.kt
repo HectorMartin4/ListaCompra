@@ -29,7 +29,7 @@ const val TABLE_ITEM_NAME = "items"
 data class ItemEntity(
     @PrimaryKey(autoGenerate = true) @ColumnInfo(name = "id") val id: Int = 0,
     @ColumnInfo(name = "name") val name: String,
-    @ColumnInfo(name = "price") val price: Double,
+    @ColumnInfo(name = "price") val price: Double? = null,
     @ColumnInfo(name = "categoryId") val categoryId: Int? = null,
     @ColumnInfo(name = "supermarketId") val supermarketId: Int
 )
