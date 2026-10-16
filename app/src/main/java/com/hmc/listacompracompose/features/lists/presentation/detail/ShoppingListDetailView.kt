@@ -274,8 +274,15 @@ fun ShoppingListDetailContent(
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
                         )
+
+                        val targetProgress =
+                            if (totalCount > 0) checkedCount.toFloat() / totalCount else 0f
+                        val animatedProgress by animateFloatAsState(
+                            targetValue = targetProgress,
+                            label = "progressAnimation"
+                        )
                         LinearProgressIndicator(
-                            progress = { if (totalCount > 0) checkedCount.toFloat() / totalCount else 0f },
+                            progress = { animatedProgress },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 4.dp),
