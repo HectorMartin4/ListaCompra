@@ -8,10 +8,12 @@ import com.hmc.listacompracompose.features.categories.domain.ObserveCategoriesUs
 import com.hmc.listacompracompose.features.items.domain.GetItemListUseCase
 import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.lists.domain.AddItemToListUseCase
+import com.hmc.listacompracompose.features.lists.domain.DeleteShoppingListUseCase
 import com.hmc.listacompracompose.features.lists.domain.ListItemModel
 import com.hmc.listacompracompose.features.lists.domain.ObserveListItemsUseCase
 import com.hmc.listacompracompose.features.lists.domain.ObserveShoppingListsUseCase
 import com.hmc.listacompracompose.features.lists.domain.RemoveItemFromListUseCase
+import com.hmc.listacompracompose.features.lists.domain.RenameShoppingListUseCase
 import com.hmc.listacompracompose.features.lists.domain.RestoreItemToListUseCase
 import com.hmc.listacompracompose.features.lists.domain.SetItemAmountUseCase
 import com.hmc.listacompracompose.features.lists.domain.SetItemCheckedUseCase
@@ -28,16 +30,20 @@ import kotlinx.coroutines.launch
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
 
+enum class ListMode { COMPRA, EDICION }
+
 data class ListDetailUiState(
     val listName: String = "",
     val items: List<ListItemModel> = emptyList(),
     val picker: PickerData? = null,
     val isLoading: Boolean = true,
     val error: String? = null,
-    val undo: UndoPrompt? = null
+    val undo: UndoPrompt? = null,
+    val mode: ListMode = ListMode.COMPRA
 ) {
     val total: Double get() = items.sumOf { (it.price ?: 0.0) * it.amount }
     val itemsWithoutPrice: Int get() = items.count { it.price == null }
+    val checkedCount: Int get() = items.count { it.isChecked }
 }
 
 data class PickerData(
@@ -56,14 +62,18 @@ class ShoppingListDetailViewModel(
     private val setItemCheckedUseCase: SetItemCheckedUseCase,
     private val setItemAmountUseCase: SetItemAmountUseCase,
     private val restoreItemToListUseCase: RestoreItemToListUseCase,
-    private val observeCategoriesUseCase: ObserveCategoriesUseCase
+    private val observeCategoriesUseCase: ObserveCategoriesUseCase,
+    private val renameShoppingListUseCase: RenameShoppingListUseCase,
+    private val deleteShoppingListUseCase: DeleteShoppingListUseCase
 ) : ViewModel() {
 
+    private val _mode = MutableStateFlow(ListMode.COMPRA)
     private val _picker = MutableStateFlow<PickerData?>(null)
     private val _error = MutableStateFlow<String?>(null)
     private val _undo = MutableStateFlow<UndoPrompt?>(null)
     private var lastRemoved: ListItemModel? = null
 
+    @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<ListDetailUiState> = combine(
         observeListsUseCase(),
         observeListItemsUseCase(listId).catch { e ->
@@ -72,9 +82,18 @@ class ShoppingListDetailViewModel(
             emit(emptyList())
         },
         _picker,
+        _mode,
         _error,
         _undo
-    ) { lists, items, picker, error, undo ->
+    ) { flows: Array<Any?> ->
+        val lists =
+            flows[0] as List<com.hmc.listacompracompose.features.lists.domain.ShoppingListModel>
+        val items = flows[1] as List<ListItemModel>
+        val picker = flows[2] as PickerData?
+        val mode = flows[3] as ListMode
+        val error = flows[4] as String?
+        val undo = flows[5] as UndoPrompt?
+
         val idsInList = items.map { it.itemId }.toSet()
         ListDetailUiState(
             listName = lists.firstOrNull { it.id == listId }?.name.orEmpty(),
@@ -82,7 +101,8 @@ class ShoppingListDetailViewModel(
             picker = picker?.copy(items = picker.items.filter { it.id !in idsInList }),
             isLoading = false,
             error = error,
-            undo = undo
+            undo = undo,
+            mode = mode
         )
     }.stateIn(
         scope = viewModelScope,
@@ -128,6 +148,19 @@ class ShoppingListDetailViewModel(
 
     fun setAmount(itemId: Int, amount: Int) = launchSafely("No se pudo cambiar la cantidad") {
         setItemAmountUseCase(listId, itemId, amount)
+    }
+
+    fun setMode(mode: ListMode) {
+        _mode.value = mode
+    }
+
+    fun renameList(name: String) = launchSafely("No se pudo renombrar la lista") {
+        renameShoppingListUseCase(listId, name)
+    }
+
+    fun deleteList(onSuccess: () -> Unit = {}) = launchSafely("No se pudo borrar la lista") {
+        deleteShoppingListUseCase(listId)
+        onSuccess()
     }
 
     fun errorShown() {
