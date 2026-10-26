@@ -16,5 +16,13 @@ interface ShoppingListRepository {
     suspend fun setChecked(listId: Int, itemId: Int, checked: Boolean)
     suspend fun setAmount(listId: Int, itemId: Int, amount: Int)
     suspend fun renameList(listId: Int, name: String)
-    suspend fun restoreItemToList(listId: Int, itemId: Int, amount: Int, isChecked: Boolean)
+    suspend fun restoreItemToList(
+        listId: Int,
+        itemId: Int,
+        amount: Int,
+        isChecked: Boolean,
+        paidPrice: Double?
+    )
+
+    suspend fun setPaidPrice(listId: Int, itemId: Int, price: Double?)
 }

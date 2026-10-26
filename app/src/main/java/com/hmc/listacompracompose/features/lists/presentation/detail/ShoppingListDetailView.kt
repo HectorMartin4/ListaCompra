@@ -13,13 +13,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
@@ -38,6 +41,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -56,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -90,6 +95,8 @@ fun ShoppingListDetailView(
         onPick = { viewModel.addItem(it.id) },
         onCheckedChange = viewModel::setChecked,
         onAmountChange = viewModel::setAmount,
+        onPaidPriceChange = viewModel::setPaidPrice,
+        onClearPaidPrice = viewModel::clearPaidPrice,
         onRemove = viewModel::removeItem,
         onUndo = viewModel::undoRemove,
         onUndoShown = viewModel::undoShown,
@@ -110,6 +117,8 @@ fun ShoppingListDetailContent(
     onPick: (ItemModel) -> Unit,
     onCheckedChange: (itemId: Int, checked: Boolean) -> Unit,
     onAmountChange: (itemId: Int, amount: Int) -> Unit,
+    onPaidPriceChange: (itemId: Int, price: Double) -> Unit,
+    onClearPaidPrice: (itemId: Int) -> Unit,
     onRemove: (ListItemModel) -> Unit,
     onUndo: () -> Unit,
     onUndoShown: () -> Unit,
@@ -123,6 +132,7 @@ fun ShoppingListDetailContent(
     var showRenameDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
+    var itemToPrice by remember { mutableStateOf<ListItemModel?>(null) }
 
     LaunchedEffect(state.error) {
         state.error?.let { message ->
@@ -197,7 +207,7 @@ fun ShoppingListDetailContent(
                             )
                         }
                         val checkedWithoutPrice =
-                            state.items.count { it.isChecked && it.price == null }
+                            state.items.count { it.isChecked && it.effectivePrice == null }
                         if (checkedWithoutPrice > 0) {
                             Text(
                                 text = if (checkedWithoutPrice == 1) {
@@ -317,6 +327,7 @@ fun ShoppingListDetailContent(
                                             mode = state.mode,
                                             onCheckedChange = { onCheckedChange(item.itemId, it) },
                                             onAmountChange = { onAmountChange(item.itemId, it) },
+                                            onPriceClick = { itemToPrice = item },
                                             onRemove = { onRemove(item) },
                                             modifier = Modifier.animateItem()
                                         )
@@ -337,6 +348,7 @@ fun ShoppingListDetailContent(
                                         mode = state.mode,
                                         onCheckedChange = { onCheckedChange(prod.itemId, it) },
                                         onAmountChange = { onAmountChange(prod.itemId, it) },
+                                        onPriceClick = { itemToPrice = prod },
                                         onRemove = { onRemove(prod) },
                                         modifier = Modifier.animateItem()
                                     )
@@ -394,6 +406,20 @@ fun ShoppingListDetailContent(
             }
         )
     }
+
+    itemToPrice?.let { item ->
+        PaidPriceDialog(
+            itemName = item.name,
+            currentPaidPrice = item.paidPrice,
+            catalogPrice = item.price,
+            onDismiss = { itemToPrice = null },
+            onConfirm = { price ->
+                if (price != null) onPaidPriceChange(item.itemId, price)
+                else onClearPaidPrice(item.itemId)
+                itemToPrice = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -402,6 +428,7 @@ fun ListItemRow(
     mode: ListMode,
     onCheckedChange: (Boolean) -> Unit,
     onAmountChange: (Int) -> Unit,
+    onPriceClick: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -452,11 +479,35 @@ fun ListItemRow(
                         modifier = Modifier.padding(vertical = 2.dp)
                     )
                 }
-                Text(
-                    text = item.price?.let { "%.2f €".format(it) } ?: "Sin precio",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onPriceClick)
+                        .padding(vertical = 6.dp, horizontal = 6.dp)
+                ) {
+                    Text(
+                        text = when {
+                            item.paidPrice != null -> "Pagado: ${item.paidPrice.formatPrice()}"
+                            item.price != null -> item.price.formatPrice()
+                            else -> "Sin precio"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (item.paidPrice != null) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Añadir precio pagado",
+                        modifier = Modifier
+                            .padding(start = 6.dp)
+                            .size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 if (mode == ListMode.EDICION) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
@@ -484,6 +535,70 @@ fun ListItemRow(
             }
         }
     }
+}
+
+@Composable
+fun PaidPriceDialog(
+    itemName: String,
+    currentPaidPrice: Double?,
+    catalogPrice: Double?,
+    onDismiss: () -> Unit,
+    onConfirm: (price: Double?) -> Unit
+) {
+    var priceText by rememberSaveable {
+        mutableStateOf(currentPaidPrice?.let { "%.2f".format(it) } ?: "")
+    }
+
+    val price = priceText.replace(',', '.').toDoubleOrNull()
+    val priceInvalid = priceText.isNotBlank() && (price == null || price < 0)
+    val canConfirm = !priceInvalid
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Precio pagado") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = itemName,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                OutlinedTextField(
+                    value = priceText,
+                    onValueChange = { priceText = it },
+                    label = { Text("Precio pagado") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    isError = priceInvalid,
+                    supportingText = {
+                        when {
+                            priceInvalid -> Text("Introduce un precio válido")
+                            catalogPrice != null ->
+                                Text("Precio del catálogo: ${catalogPrice.formatPrice()}")
+                        }
+                    }
+                )
+                Text(
+                    text = "Se guardará con la fecha de hoy en el histórico del producto.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = canConfirm && price != null,
+                onClick = { price?.let { onConfirm(it) } }
+            ) { Text("Guardar") }
+        },
+        dismissButton = {
+            Row {
+                if (currentPaidPrice != null) {
+                    TextButton(onClick = { onConfirm(null) }) { Text("Quitar") }
+                }
+                TextButton(onClick = onDismiss) { Text("Cancelar") }
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)

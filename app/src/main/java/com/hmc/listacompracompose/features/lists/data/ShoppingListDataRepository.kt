@@ -34,6 +34,9 @@ class ShoppingListDataRepository(
     override suspend fun setAmount(listId: Int, itemId: Int, amount: Int) =
         localDataSource.setAmount(listId, itemId, amount)
 
+    override suspend fun setPaidPrice(listId: Int, itemId: Int, price: Double?) =
+        localDataSource.setPaidPrice(listId, itemId, price)
+
     override suspend fun renameList(listId: Int, name: String) =
         localDataSource.renameList(listId, name)
 
@@ -41,7 +44,8 @@ class ShoppingListDataRepository(
         listId: Int,
         itemId: Int,
         amount: Int,
-        isChecked: Boolean
+        isChecked: Boolean,
+        paidPrice: Double?
     ) =
-        localDataSource.restoreItemToList(listId, itemId, amount, isChecked)
+        localDataSource.restoreItemToList(listId, itemId, amount, isChecked, paidPrice)
 }
