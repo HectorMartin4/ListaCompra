@@ -17,6 +17,7 @@ import com.hmc.listacompracompose.features.lists.domain.RenameShoppingListUseCas
 import com.hmc.listacompracompose.features.lists.domain.RestoreItemToListUseCase
 import com.hmc.listacompracompose.features.lists.domain.SetItemAmountUseCase
 import com.hmc.listacompracompose.features.lists.domain.SetItemCheckedUseCase
+import com.hmc.listacompracompose.features.lists.domain.SetPaidPriceUseCase
 import com.hmc.listacompracompose.ui.components.UndoPrompt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,8 +42,8 @@ data class ListDetailUiState(
     val undo: UndoPrompt? = null,
     val mode: ListMode = ListMode.COMPRA
 ) {
-    val total: Double get() = items.sumOf { (it.price ?: 0.0) * it.amount }
-    val itemsWithoutPrice: Int get() = items.count { it.price == null }
+    val total: Double get() = items.sumOf { (it.effectivePrice ?: 0.0) * it.amount }
+    val itemsWithoutPrice: Int get() = items.count { it.effectivePrice == null }
     val checkedCount: Int get() = items.count { it.isChecked }
 }
 
@@ -62,6 +63,7 @@ class ShoppingListDetailViewModel(
     private val setItemCheckedUseCase: SetItemCheckedUseCase,
     private val setItemAmountUseCase: SetItemAmountUseCase,
     private val restoreItemToListUseCase: RestoreItemToListUseCase,
+    private val setPaidPriceUseCase: SetPaidPriceUseCase,
     private val observeCategoriesUseCase: ObserveCategoriesUseCase,
     private val renameShoppingListUseCase: RenameShoppingListUseCase,
     private val deleteShoppingListUseCase: DeleteShoppingListUseCase
@@ -133,9 +135,18 @@ class ShoppingListDetailViewModel(
 
     fun undoRemove() = launchSafely("No se pudo deshacer") {
         lastRemoved?.let {
-            restoreItemToListUseCase(listId, it.itemId, it.amount, it.isChecked)
+            restoreItemToListUseCase(listId, it.itemId, it.amount, it.isChecked, it.paidPrice)
         }
         lastRemoved = null
+    }
+
+    // Guarda el precio pagado y registra el histórico del producto
+    fun setPaidPrice(itemId: Int, price: Double) = launchSafely("No se pudo guardar el precio") {
+        setPaidPriceUseCase(listId, itemId, price)
+    }
+
+    fun clearPaidPrice(itemId: Int) = launchSafely("No se pudo quitar el precio") {
+        setPaidPriceUseCase.clear(listId, itemId)
     }
 
     fun undoShown() {

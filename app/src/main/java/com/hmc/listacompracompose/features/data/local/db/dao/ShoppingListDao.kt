@@ -27,7 +27,8 @@ interface ShoppingListDao {
 
     @Query(
         """
-    SELECT i.id AS itemId, i.name, i.price, li.amount, li.isChecked,
+    SELECT i.id AS itemId, i.name, i.price, li.paidPrice AS paidPrice,
+           li.amount, li.isChecked,
            c.id AS categoryId, c.name AS categoryName
     FROM $TABLE_SHOPPING_LIST_ITEM li
     INNER JOIN $TABLE_ITEM_NAME i ON i.id = li.itemId
@@ -49,6 +50,9 @@ interface ShoppingListDao {
 
     @Query("UPDATE $TABLE_SHOPPING_LIST_ITEM SET amount = :amount WHERE listId = :listId AND itemId = :itemId")
     suspend fun setAmount(listId: Int, itemId: Int, amount: Int)
+
+    @Query("UPDATE $TABLE_SHOPPING_LIST_ITEM SET paidPrice = :price WHERE listId = :listId AND itemId = :itemId")
+    suspend fun setPaidPrice(listId: Int, itemId: Int, price: Double?)
 
     @Query("UPDATE $TABLE_SHOPPING_LIST SET name = :name WHERE id = :listId")
     suspend fun renameList(listId: Int, name: String)

@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.hmc.listacompracompose.features.data.local.db.dao.CategoryDao
 import com.hmc.listacompracompose.features.data.local.db.dao.ItemDao
+import com.hmc.listacompracompose.features.data.local.db.dao.PriceHistoryDao
 import com.hmc.listacompracompose.features.data.local.db.dao.ShoppingListDao
 import com.hmc.listacompracompose.features.data.local.db.dao.SupermarketDao
 import com.hmc.listacompracompose.features.data.local.db.entities.CategoryEntity
@@ -30,4 +31,5 @@ abstract class ItemDatabase : RoomDatabase() {
     abstract fun shoppingListDao(): ShoppingListDao
     abstract fun categoryDao(): CategoryDao
     abstract fun supermarketDao(): SupermarketDao
+    abstract fun priceHistoryDao(): PriceHistoryDao
 }

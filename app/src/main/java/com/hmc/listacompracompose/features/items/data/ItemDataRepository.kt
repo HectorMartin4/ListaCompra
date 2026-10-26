@@ -2,9 +2,7 @@ package com.hmc.listacompracompose.features.items.data
 
 import android.content.Context
 import android.util.Log
-import com.hmc.listacompracompose.features.data.local.db.entities.DEFAULT_SUPERMARKET_ID
 import com.hmc.listacompracompose.features.items.data.db.ItemDbLocalDataSource
-import com.hmc.listacompracompose.features.items.data.mock.mockItemList
 import com.hmc.listacompracompose.features.items.data.remote.ItemApiRemoteDataSource
 import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.items.domain.ItemRepository
@@ -30,9 +28,8 @@ class ItemDataRepository(
     private suspend fun loadInitialDataIfNeeded() {
         if (prefs.getBoolean(KEY_INITIAL_LOADED, false)) return
 
-        // --- OPCIÓN MOCK ---
-        localDataSource.saveItemList(mockItemList, DEFAULT_SUPERMARKET_ID)
-        Log.d(TAG, "Mock guardado en la BD local")
+        // Catálogo vacío al instalar: el usuario crea sus propios productos
+        // (los mocks de ItemMock.kt quedaron para desarrollo puntual)
 
         // --- OPCIÓN API ---
         /*

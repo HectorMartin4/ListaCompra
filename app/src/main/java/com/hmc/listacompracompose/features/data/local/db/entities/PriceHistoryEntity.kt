@@ -25,3 +25,10 @@ data class PriceHistoryEntity(
     val price: Double,
     val recordedAt: Long   //  System.currentTimeMillis()
 )
+
+// Precio más reciente registrado para un producto (para mostrar en el catálogo)
+data class LastPriceRow(
+    val itemId: Int,
+    val price: Double,
+    val recordedAt: Long
+)

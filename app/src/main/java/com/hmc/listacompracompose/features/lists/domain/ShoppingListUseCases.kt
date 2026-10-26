@@ -1,6 +1,7 @@
 package com.hmc.listacompracompose.features.lists.domain
 
 import com.hmc.listacompracompose.app.util.normalizeName
+import com.hmc.listacompracompose.features.pricehistory.domain.PriceHistoryRepository
 import kotlinx.coroutines.flow.Flow
 import org.koin.core.annotation.Single
 
@@ -55,6 +56,26 @@ class RenameShoppingListUseCase(private val repository: ShoppingListRepository) 
 
 @Single
 class RestoreItemToListUseCase(private val repository: ShoppingListRepository) {
-    suspend operator fun invoke(listId: Int, itemId: Int, amount: Int, isChecked: Boolean) =
-        repository.restoreItemToList(listId, itemId, amount, isChecked)
+    suspend operator fun invoke(
+        listId: Int,
+        itemId: Int,
+        amount: Int,
+        isChecked: Boolean,
+        paidPrice: Double? = null
+    ) = repository.restoreItemToList(listId, itemId, amount, isChecked, paidPrice)
+}
+
+// Guarda el precio pagado en la lista y lo añade al histórico del producto con la fecha actual
+@Single
+class SetPaidPriceUseCase(
+    private val repository: ShoppingListRepository,
+    private val priceHistoryRepository: PriceHistoryRepository
+) {
+    suspend operator fun invoke(listId: Int, itemId: Int, price: Double) {
+        repository.setPaidPrice(listId, itemId, price)
+        priceHistoryRepository.recordPrice(itemId, price, System.currentTimeMillis())
+    }
+
+    // Quitar el precio pagado no borra el histórico ya registrado
+    suspend fun clear(listId: Int, itemId: Int) = repository.setPaidPrice(listId, itemId, null)
 }

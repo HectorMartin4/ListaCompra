@@ -3,6 +3,7 @@ package com.hmc.listacompracompose.features.di
 import com.hmc.listacompracompose.app.data.db.ItemDatabase
 import com.hmc.listacompracompose.features.data.local.db.dao.CategoryDao
 import com.hmc.listacompracompose.features.data.local.db.dao.ItemDao
+import com.hmc.listacompracompose.features.data.local.db.dao.PriceHistoryDao
 import com.hmc.listacompracompose.features.data.local.db.dao.ShoppingListDao
 import com.hmc.listacompracompose.features.data.local.db.dao.SupermarketDao
 import com.hmc.listacompracompose.features.items.data.remote.ApiService
@@ -36,5 +37,10 @@ class FeatureModule {
     @Single
     fun provideSupermarketDao(db: ItemDatabase): SupermarketDao {
         return db.supermarketDao()
+    }
+
+    @Single
+    fun providePriceHistoryDao(db: ItemDatabase): PriceHistoryDao {
+        return db.priceHistoryDao()
     }
 }

@@ -56,6 +56,7 @@ import com.hmc.listacompracompose.ui.components.CategoryHeader
 import com.hmc.listacompracompose.ui.components.SearchField
 import com.hmc.listacompracompose.ui.theme.appTopBarColors
 import org.koin.compose.viewmodel.koinViewModel
+import java.util.Date
 
 @Composable
 fun ItemListView(
@@ -71,6 +72,9 @@ fun ItemListView(
         onDelete = viewModel::deleteCatalogItem,
         onErrorShown = viewModel::errorShown,
         onEdit = viewModel::updateItem,
+        onOpenDetail = viewModel::openDetail,
+        onCloseDetail = viewModel::closeDetail,
+        onAddHistoryPrice = viewModel::addHistoryPrice,
         onOpenCategories = onOpenCategories,
         onManageSupermarkets = onManageSupermarkets
     )
@@ -83,6 +87,9 @@ fun ItemListContent(
     onAdd: (name: String, price: Double?, categoryId: Int?) -> Unit,
     onEdit: (ItemModel) -> Unit,
     onDelete: (ItemModel) -> Unit,
+    onOpenDetail: (ItemModel) -> Unit,
+    onCloseDetail: () -> Unit,
+    onAddHistoryPrice: (price: Double, date: Date) -> Unit,
     onOpenCategories: () -> Unit,
     onManageSupermarkets: () -> Unit,
     onErrorShown: () -> Unit,
@@ -184,7 +191,8 @@ fun ItemListContent(
                                 items(items = group.items, key = { it.id }) { item ->
                                     CatalogItemRow(
                                         item = item,
-                                        onClick = { itemToEdit = item },
+                                        lastPrice = state.lastPrices[item.id],
+                                        onClick = { onOpenDetail(item) },
                                         onDelete = { itemToDelete = item }
                                     )
                                 }
@@ -243,11 +251,21 @@ fun ItemListContent(
             }
         )
     }
+
+    state.detail?.let { detail ->
+        ItemHistorySheet(
+            detail = detail,
+            onDismiss = onCloseDetail,
+            onAddPrice = onAddHistoryPrice,
+            onEditItem = { itemToEdit = it }
+        )
+    }
 }
 
 @Composable
 fun CatalogItemRow(
     item: ItemModel,
+    lastPrice: Double?,
     onClick: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
@@ -267,9 +285,20 @@ fun CatalogItemRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = item.name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = item.price?.let { "Precio habitual: %.2f €".format(it) } ?: "Sin precio",
+                    text = lastPrice?.let { "Último: %.2f €".format(it) }
+                        ?: item.price?.let { "Precio habitual: %.2f €".format(it) }
+                        ?: "Sin precio",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (lastPrice != null) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+                Text(
+                    text = "Pulsa para ver el histórico de precios",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
                 )
             }
             IconButton(onClick = onDelete) {
