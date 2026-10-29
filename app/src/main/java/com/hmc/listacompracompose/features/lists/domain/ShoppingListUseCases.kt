@@ -5,14 +5,16 @@ import com.hmc.listacompracompose.features.pricehistory.domain.PriceHistoryRepos
 import kotlinx.coroutines.flow.Flow
 import org.koin.core.annotation.Single
 
+// Todas las listas de todos los supermercados, con el nombre del supermercado
 @Single
-class ObserveShoppingListsUseCase(private val repository: ShoppingListRepository) {
-    operator fun invoke(): Flow<List<ShoppingListModel>> = repository.observeLists()
+class ObserveAllShoppingListsUseCase(private val repository: ShoppingListRepository) {
+    operator fun invoke(): Flow<List<ShoppingListModel>> = repository.observeAllLists()
 }
 
 @Single
 class CreateShoppingListUseCase(private val repository: ShoppingListRepository) {
-    suspend operator fun invoke(name: String) = repository.createList(name.normalizeName())
+    suspend operator fun invoke(name: String, supermarketId: Int) =
+        repository.createList(name.normalizeName(), supermarketId)
 }
 
 @Single
@@ -78,4 +80,10 @@ class SetPaidPriceUseCase(
 
     // Quitar el precio pagado no borra el histórico ya registrado
     suspend fun clear(listId: Int, itemId: Int) = repository.setPaidPrice(listId, itemId, null)
+}
+
+// Estado de completitud de todas las listas (para mostrar en la vista principal)
+@Single
+class ObserveListCompletionUseCase(private val repository: ShoppingListRepository) {
+    operator fun invoke(): Flow<Map<Int, Boolean>> = repository.observeListCompletion()
 }

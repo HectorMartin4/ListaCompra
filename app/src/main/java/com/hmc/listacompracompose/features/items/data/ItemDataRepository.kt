@@ -23,7 +23,13 @@ class ItemDataRepository(
     override fun observeItemList(): Flow<List<ItemModel>> =
         localDataSource.observeItems().onStart { loadInitialDataIfNeeded() }
 
+    override fun observeItemList(supermarketId: Int): Flow<List<ItemModel>> =
+        localDataSource.observeItems(supermarketId)
+
     override suspend fun getItemList(): List<ItemModel> = observeItemList().first()
+
+    override suspend fun getItemList(supermarketId: Int): List<ItemModel> =
+        localDataSource.getItemList(supermarketId)
 
     private suspend fun loadInitialDataIfNeeded() {
         if (prefs.getBoolean(KEY_INITIAL_LOADED, false)) return

@@ -40,3 +40,21 @@ fun <T> groupByCategory(
     return if (withoutCategory.isEmpty()) groups
     else groups + CategoryGroup(null, "Sin categoría", withoutCategory)
 }
+
+// Filtrado también por nombre de categoría
+fun <T> List<T>.filterByQueryWithCategory(
+    query: String,
+    nameOf: (T) -> String,
+    categories: List<CategoryModel>,
+    categoryIdOf: (T) -> Int?
+): List<T> {
+    val normalizedQuery = query.normalizeForSearch()
+    return if (normalizedQuery.isEmpty()) this
+    else filter { item ->
+        val nameMatch = nameOf(item).normalizeForSearch().contains(normalizedQuery)
+        val categoryMatch = categories.firstOrNull { it.id == categoryIdOf(item) }
+            ?.name?.normalizeForSearch()
+            ?.contains(normalizedQuery) == true
+        nameMatch || categoryMatch
+    }
+}

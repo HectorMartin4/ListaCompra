@@ -5,27 +5,21 @@ import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListEn
 import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListItemEntity
 import com.hmc.listacompracompose.features.lists.domain.ListItemModel
 import com.hmc.listacompracompose.features.lists.domain.ShoppingListModel
-import com.hmc.listacompracompose.features.supermarkets.data.ActiveSupermarketProvider
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
 
 @Single
 class ShoppingListDbLocalDataSource(
-    private val dao: ShoppingListDao,
-    private val activeSupermarket: ActiveSupermarketProvider
+    private val dao: ShoppingListDao
 ) {
-    @OptIn(ExperimentalCoroutinesApi::class)
-    fun observeLists(): Flow<List<ShoppingListModel>> =
-        activeSupermarket.activeId
-            .flatMapLatest { supermarketId -> dao.observeLists(supermarketId) }
-            .map { lists -> lists.map { it.toModel() } }
+    // Todas las listas de todos los supermercados, con el nombre del supermercado
+    fun observeAllLists(): Flow<List<ShoppingListModel>> =
+        dao.observeAllLists().map { lists -> lists.map { it.toModel() } }
 
-    suspend fun createList(name: String) {
+    suspend fun createList(name: String, supermarketId: Int) {
         dao.insertList(
-            ShoppingListEntity(name = name, supermarketId = activeSupermarket.current())
+            ShoppingListEntity(name = name, supermarketId = supermarketId)
         )
     }
 
@@ -70,4 +64,10 @@ class ShoppingListDbLocalDataSource(
             )
         )
     }
+
+    // Estado de completitud de todas las listas (para mostrar en la vista principal)
+    fun observeListCompletion(): Flow<Map<Int, Boolean>> =
+        dao.observeListCompletion().map { rows ->
+            rows.associate { it.listId to (it.total > 0 && it.checked == it.total) }
+        }
 }

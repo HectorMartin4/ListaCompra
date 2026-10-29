@@ -63,3 +63,11 @@ data class ListItemRow(
     val categoryId: Int?,
     val categoryName: String?
 )
+
+// Fila usada para mostrar todas las listas de todos los supermercados, con el nombre del supermercado
+data class AllListRow(
+    val listId: Int,
+    val listName: String,
+    val supermarketId: Int,
+    val supermarketName: String
+)

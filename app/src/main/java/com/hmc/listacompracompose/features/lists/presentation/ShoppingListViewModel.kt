@@ -5,9 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hmc.listacompracompose.features.lists.domain.CreateShoppingListUseCase
 import com.hmc.listacompracompose.features.lists.domain.DeleteShoppingListUseCase
-import com.hmc.listacompracompose.features.lists.domain.ObserveShoppingListsUseCase
+import com.hmc.listacompracompose.features.lists.domain.ObserveAllShoppingListsUseCase
+import com.hmc.listacompracompose.features.lists.domain.ObserveListCompletionUseCase
 import com.hmc.listacompracompose.features.lists.domain.RenameShoppingListUseCase
 import com.hmc.listacompracompose.features.lists.domain.ShoppingListModel
+import com.hmc.listacompracompose.features.supermarkets.domain.ObserveActiveSupermarketUseCase
+import com.hmc.listacompracompose.features.supermarkets.domain.ObserveSupermarketsUseCase
+import com.hmc.listacompracompose.features.supermarkets.domain.SupermarketModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,13 +24,19 @@ import org.koin.core.annotation.KoinViewModel
 
 data class ShoppingListsUiState(
     val lists: List<ShoppingListModel> = emptyList(),
+    val supermarkets: List<SupermarketModel> = emptyList(),
+    val activeSupermarketId: Int? = null,
+    val listCompletion: Map<Int, Boolean> = emptyMap(),
     val isLoading: Boolean = true,
     val error: String? = null
 )
 
 @KoinViewModel
 class ShoppingListsViewModel(
-    observeListsUseCase: ObserveShoppingListsUseCase,
+    observeAllListsUseCase: ObserveAllShoppingListsUseCase,
+    observeListCompletionUseCase: ObserveListCompletionUseCase,
+    observeSupermarketsUseCase: ObserveSupermarketsUseCase,
+    observeActiveSupermarketUseCase: ObserveActiveSupermarketUseCase,
     private val createListUseCase: CreateShoppingListUseCase,
     private val deleteListUseCase: DeleteShoppingListUseCase,
     private val renameListUseCase: RenameShoppingListUseCase
@@ -35,22 +45,39 @@ class ShoppingListsViewModel(
     private val _error = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<ShoppingListsUiState> = combine(
-        observeListsUseCase().catch { e ->
+        observeAllListsUseCase().catch { e ->
             Log.e(TAG, "Error al observar las listas", e)
             _error.value = "No se pudieron cargar las listas"
             emit(emptyList())
         },
+        observeSupermarketsUseCase().catch { e ->
+            Log.e(TAG, "Error al observar los supermercados", e)
+            _error.value = "No se pudieron cargar los supermercados"
+            emit(emptyList())
+        },
+        observeActiveSupermarketUseCase(),
+        observeListCompletionUseCase().catch { e ->
+            Log.e(TAG, "Error al observar completitud", e)
+            emit(emptyMap())
+        },
         _error
-    ) { lists, error ->
-        ShoppingListsUiState(lists = lists, isLoading = false, error = error)
+    ) { lists, supermarkets, active, completion, error ->
+        ShoppingListsUiState(
+            lists = lists,
+            supermarkets = supermarkets,
+            activeSupermarketId = active?.id,
+            listCompletion = completion,
+            isLoading = false,
+            error = error
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = ShoppingListsUiState()
     )
 
-    fun createList(name: String) = launchSafely("No se pudo crear la lista") {
-        createListUseCase(name)
+    fun createList(name: String, supermarketId: Int) = launchSafely("No se pudo crear la lista") {
+        createListUseCase(name, supermarketId)
     }
 
     fun deleteList(listId: Int) = launchSafely("No se pudo borrar la lista") {

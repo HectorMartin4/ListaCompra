@@ -12,10 +12,12 @@ class ShoppingListDataRepository(
     private val localDataSource: ShoppingListDbLocalDataSource
 ) : ShoppingListRepository {
 
-    override fun observeLists(): Flow<List<ShoppingListModel>> =
-        localDataSource.observeLists()
+    // Todas las listas de todos los supermercados, con el nombre del supermercado
+    override fun observeAllLists(): Flow<List<ShoppingListModel>> =
+        localDataSource.observeAllLists()
 
-    override suspend fun createList(name: String) = localDataSource.createList(name)
+    override suspend fun createList(name: String, supermarketId: Int) =
+        localDataSource.createList(name, supermarketId)
 
     override suspend fun deleteList(listId: Int) = localDataSource.deleteList(listId)
 
@@ -48,4 +50,7 @@ class ShoppingListDataRepository(
         paidPrice: Double?
     ) =
         localDataSource.restoreItemToList(listId, itemId, amount, isChecked, paidPrice)
+
+    override fun observeListCompletion(): Flow<Map<Int, Boolean>> =
+        localDataSource.observeListCompletion()
 }

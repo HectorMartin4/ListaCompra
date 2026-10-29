@@ -5,6 +5,7 @@ import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.supermarkets.data.ActiveSupermarketProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
@@ -20,6 +21,14 @@ class ItemDbLocalDataSource(
         activeSupermarket.activeId
             .flatMapLatest { supermarketId -> itemDao.observeItems(supermarketId) }
             .map { list -> list.map { it.toModel() } }
+
+    // Catálogo de un supermercado concreto (usado al añadir productos a una lista
+    // de ese supermercado, independientemente del supermercado activo)
+    fun observeItems(supermarketId: Int): Flow<List<ItemModel>> =
+        itemDao.observeItems(supermarketId).map { list -> list.map { it.toModel() } }
+
+    suspend fun getItemList(supermarketId: Int): List<ItemModel> =
+        observeItems(supermarketId).first()
 
     // Para la carga inicial: se indica el supermercado explícitamente
     suspend fun saveItemList(items: List<ItemModel>, supermarketId: Int) {

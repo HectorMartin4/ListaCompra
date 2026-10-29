@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.hmc.listacompracompose.features.data.local.db.entities.AllListRow
 import com.hmc.listacompracompose.features.data.local.db.entities.ListItemRow
 import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListEntity
 import com.hmc.listacompracompose.features.data.local.db.entities.ShoppingListItemEntity
@@ -11,13 +12,22 @@ import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_CATEGORY
 import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_ITEM_NAME
 import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_SHOPPING_LIST
 import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_SHOPPING_LIST_ITEM
+import com.hmc.listacompracompose.features.data.local.db.entities.TABLE_SUPERMARKET
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ShoppingListDao {
 
-    @Query("SELECT * FROM $TABLE_SHOPPING_LIST WHERE supermarketId = :supermarketId ORDER BY id")
-    fun observeLists(supermarketId: Int): Flow<List<ShoppingListEntity>>
+    // Todas las listas, uniendo el nombre del supermercado. Ordenado por supermercado y luego por id.
+    @Query(
+        """
+        SELECT l.id AS listId, l.name AS listName, l.supermarketId AS supermarketId, s.name AS supermarketName
+        FROM $TABLE_SHOPPING_LIST l
+        INNER JOIN $TABLE_SUPERMARKET s ON s.id = l.supermarketId
+        ORDER BY l.supermarketId, l.id
+        """
+    )
+    fun observeAllLists(): Flow<List<AllListRow>>
 
     @Insert
     suspend fun insertList(list: ShoppingListEntity): Long
@@ -56,4 +66,33 @@ interface ShoppingListDao {
 
     @Query("UPDATE $TABLE_SHOPPING_LIST SET name = :name WHERE id = :listId")
     suspend fun renameList(listId: Int, name: String)
+
+    // Cuenta items checked y total por lista (para saber si está completada)
+    @Query(
+        """
+        SELECT listId,
+               COUNT(*) as total,
+               SUM(CASE WHEN isChecked = 1 THEN 1 ELSE 0 END) as checked
+        FROM $TABLE_SHOPPING_LIST_ITEM
+        GROUP BY listId
+        """
+    )
+    fun observeListCompletion(): Flow<List<ListCompletionRow>>
+
+    @Query(
+        """
+        SELECT listId,
+               COUNT(*) as total,
+               SUM(CASE WHEN isChecked = 1 THEN 1 ELSE 0 END) as checked
+        FROM $TABLE_SHOPPING_LIST_ITEM
+        WHERE listId = :listId
+        """
+    )
+    suspend fun getListCompletion(listId: Int): ListCompletionRow?
 }
+
+data class ListCompletionRow(
+    val listId: Int,
+    val total: Int,
+    val checked: Int
+)

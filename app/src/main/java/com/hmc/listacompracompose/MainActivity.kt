@@ -79,8 +79,7 @@ fun App() {
         ) {
             composable(Screen.ShoppingList.route) {
                 ShoppingListsView(
-                    onListClick = { listId -> navController.navigate(Routes.listDetail(listId)) },
-                    onManageSupermarkets = { navController.navigate(Routes.SUPERMARKETS) }
+                    onListClick = { listId -> navController.navigate(Routes.listDetail(listId)) }
                 )
             }
 

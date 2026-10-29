@@ -47,7 +47,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.hmc.listacompracompose.app.util.filterByQuery
+import com.hmc.listacompracompose.app.util.filterByQueryWithCategory
 import com.hmc.listacompracompose.app.util.groupByCategory
 import com.hmc.listacompracompose.features.categories.domain.CategoryModel
 import com.hmc.listacompracompose.features.items.domain.ItemModel
@@ -102,8 +102,12 @@ fun ItemListContent(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val groups = remember(state.itemList, state.categories, query) {
-        groupByCategory(
-            items = state.itemList.filterByQuery(query) { it.name },
+        groupByCategory<ItemModel>(
+            items = state.itemList.filterByQueryWithCategory(
+                query,
+                { it.name },
+                state.categories,
+                { it.categoryId }),
             categories = state.categories,
             categoryIdOf = { it.categoryId }
         )

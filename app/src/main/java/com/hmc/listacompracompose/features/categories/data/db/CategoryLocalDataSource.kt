@@ -5,6 +5,7 @@ import com.hmc.listacompracompose.features.data.local.db.dao.CategoryDao
 import com.hmc.listacompracompose.features.supermarkets.data.ActiveSupermarketProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
@@ -20,6 +21,14 @@ class CategoryLocalDataSource(
         activeSupermarket.activeId
             .flatMapLatest { supermarketId -> dao.observeCategories(supermarketId) }
             .map { list -> list.map { it.toModel() } }
+
+    // Categorías de un supermercado concreto (usado al añadir productos a una lista
+    // de ese supermercado, independientemente del supermercado activo)
+    fun observeCategories(supermarketId: Int): Flow<List<CategoryModel>> =
+        dao.observeCategories(supermarketId).map { list -> list.map { it.toModel() } }
+
+    suspend fun getCategories(supermarketId: Int): List<CategoryModel> =
+        observeCategories(supermarketId).first()
 
     suspend fun createCategory(name: String) =
         dao.insertAtEnd(name, activeSupermarket.current())
