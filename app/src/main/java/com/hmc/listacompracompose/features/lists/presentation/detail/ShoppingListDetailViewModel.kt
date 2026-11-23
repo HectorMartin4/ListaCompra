@@ -4,14 +4,14 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hmc.listacompracompose.features.categories.domain.CategoryModel
-import com.hmc.listacompracompose.features.categories.domain.ObserveCategoriesUseCase
+import com.hmc.listacompracompose.features.categories.domain.GetCategoriesUseCase
 import com.hmc.listacompracompose.features.items.domain.GetItemListUseCase
 import com.hmc.listacompracompose.features.items.domain.ItemModel
 import com.hmc.listacompracompose.features.lists.domain.AddItemToListUseCase
 import com.hmc.listacompracompose.features.lists.domain.DeleteShoppingListUseCase
 import com.hmc.listacompracompose.features.lists.domain.ListItemModel
+import com.hmc.listacompracompose.features.lists.domain.ObserveAllShoppingListsUseCase
 import com.hmc.listacompracompose.features.lists.domain.ObserveListItemsUseCase
-import com.hmc.listacompracompose.features.lists.domain.ObserveShoppingListsUseCase
 import com.hmc.listacompracompose.features.lists.domain.RemoveItemFromListUseCase
 import com.hmc.listacompracompose.features.lists.domain.RenameShoppingListUseCase
 import com.hmc.listacompracompose.features.lists.domain.RestoreItemToListUseCase
@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.InjectedParam
@@ -35,6 +34,7 @@ enum class ListMode { COMPRA, EDICION }
 
 data class ListDetailUiState(
     val listName: String = "",
+    val supermarketId: Int? = null,
     val items: List<ListItemModel> = emptyList(),
     val picker: PickerData? = null,
     val isLoading: Boolean = true,
@@ -45,6 +45,7 @@ data class ListDetailUiState(
     val total: Double get() = items.sumOf { (it.effectivePrice ?: 0.0) * it.amount }
     val itemsWithoutPrice: Int get() = items.count { it.effectivePrice == null }
     val checkedCount: Int get() = items.count { it.isChecked }
+    val isComplete: Boolean get() = items.isNotEmpty() && checkedCount == items.size
 }
 
 data class PickerData(
@@ -55,7 +56,7 @@ data class PickerData(
 @KoinViewModel
 class ShoppingListDetailViewModel(
     @InjectedParam private val listId: Int,
-    observeListsUseCase: ObserveShoppingListsUseCase,
+    observeAllListsUseCase: ObserveAllShoppingListsUseCase,
     observeListItemsUseCase: ObserveListItemsUseCase,
     private val getItemListUseCase: GetItemListUseCase,
     private val addItemToListUseCase: AddItemToListUseCase,
@@ -64,7 +65,7 @@ class ShoppingListDetailViewModel(
     private val setItemAmountUseCase: SetItemAmountUseCase,
     private val restoreItemToListUseCase: RestoreItemToListUseCase,
     private val setPaidPriceUseCase: SetPaidPriceUseCase,
-    private val observeCategoriesUseCase: ObserveCategoriesUseCase,
+    private val getCategoriesUseCase: GetCategoriesUseCase,
     private val renameShoppingListUseCase: RenameShoppingListUseCase,
     private val deleteShoppingListUseCase: DeleteShoppingListUseCase
 ) : ViewModel() {
@@ -77,7 +78,7 @@ class ShoppingListDetailViewModel(
 
     @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<ListDetailUiState> = combine(
-        observeListsUseCase(),
+        observeAllListsUseCase(),
         observeListItemsUseCase(listId).catch { e ->
             Log.e(TAG, "Error al observar los productos de la lista", e)
             _error.value = "No se pudo cargar la lista"
@@ -97,8 +98,10 @@ class ShoppingListDetailViewModel(
         val undo = flows[5] as UndoPrompt?
 
         val idsInList = items.map { it.itemId }.toSet()
+        val currentList = lists.firstOrNull { it.id == listId }
         ListDetailUiState(
-            listName = lists.firstOrNull { it.id == listId }?.name.orEmpty(),
+            listName = currentList?.name.orEmpty(),
+            supermarketId = currentList?.supermarketId,
             items = items,
             picker = picker?.copy(items = picker.items.filter { it.id !in idsInList }),
             isLoading = false,
@@ -112,10 +115,13 @@ class ShoppingListDetailViewModel(
         initialValue = ListDetailUiState()
     )
 
+    // El catálogo que se muestra es el del supermercado AL QUE PERTENECE la lista,
+    // no el del supermercado activo (que es el que se usa en la pestaña Catálogo)
     fun openPicker() = launchSafely("No se pudo cargar el catálogo") {
+        val supermarketId = uiState.value.supermarketId ?: return@launchSafely
         _picker.value = PickerData(
-            items = getItemListUseCase(),
-            categories = observeCategoriesUseCase().first()
+            items = getItemListUseCase(supermarketId),
+            categories = getCategoriesUseCase(supermarketId)
         )
     }
 

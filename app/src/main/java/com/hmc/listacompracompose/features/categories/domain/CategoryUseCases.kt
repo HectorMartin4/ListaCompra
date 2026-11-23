@@ -7,6 +7,16 @@ import org.koin.core.annotation.Single
 @Single
 class ObserveCategoriesUseCase(private val repository: CategoryRepository) {
     operator fun invoke(): Flow<List<CategoryModel>> = repository.observeCategories()
+
+    // Categorías de un supermercado concreto (al añadir productos a una lista de ese supermercado)
+    operator fun invoke(supermarketId: Int): Flow<List<CategoryModel>> =
+        repository.observeCategories(supermarketId)
+}
+
+@Single
+class GetCategoriesUseCase(private val repository: CategoryRepository) {
+    suspend operator fun invoke(supermarketId: Int): List<CategoryModel> =
+        repository.getCategories(supermarketId)
 }
 
 @Single

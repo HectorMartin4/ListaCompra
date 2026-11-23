@@ -4,9 +4,10 @@ import kotlinx.coroutines.flow.Flow
 
 interface ShoppingListRepository {
 
-    fun observeLists(): Flow<List<ShoppingListModel>>
+    // Todas las listas de todos los supermercados, con el nombre del supermercado
+    fun observeAllLists(): Flow<List<ShoppingListModel>>
 
-    suspend fun createList(name: String)
+    suspend fun createList(name: String, supermarketId: Int)
     suspend fun deleteList(listId: Int)
 
     fun observeListItems(listId: Int): Flow<List<ListItemModel>>
@@ -25,4 +26,7 @@ interface ShoppingListRepository {
     )
 
     suspend fun setPaidPrice(listId: Int, itemId: Int, price: Double?)
+
+    // Completitud de listas
+    fun observeListCompletion(): Flow<Map<Int, Boolean>>
 }

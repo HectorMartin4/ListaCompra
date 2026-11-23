@@ -2,7 +2,9 @@ package com.hmc.listacompracompose.features.lists.domain
 
 data class ShoppingListModel(
     val id: Int = 0,
-    val name: String
+    val name: String,
+    val supermarketId: Int = 0,
+    val supermarketName: String = ""
 )
 
 data class ListItemModel(

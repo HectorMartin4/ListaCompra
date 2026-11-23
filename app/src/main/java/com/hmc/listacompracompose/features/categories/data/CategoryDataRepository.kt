@@ -14,6 +14,12 @@ class CategoryDataRepository(
     override fun observeCategories(): Flow<List<CategoryModel>> =
         localDataSource.observeCategories()
 
+    override fun observeCategories(supermarketId: Int): Flow<List<CategoryModel>> =
+        localDataSource.observeCategories(supermarketId)
+
+    override suspend fun getCategories(supermarketId: Int): List<CategoryModel> =
+        localDataSource.getCategories(supermarketId)
+
     override suspend fun createCategory(name: String) = localDataSource.createCategory(name)
 
     override suspend fun renameCategory(id: Int, name: String) =

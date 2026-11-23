@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
@@ -34,6 +35,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,10 +63,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hmc.listacompracompose.app.util.filterByQuery
+import com.hmc.listacompracompose.app.util.filterByQueryWithCategory
 import com.hmc.listacompracompose.app.util.formatPrice
 import com.hmc.listacompracompose.app.util.groupByCategory
 import com.hmc.listacompracompose.features.categories.domain.CategoryModel
@@ -152,7 +156,30 @@ fun ShoppingListDetailContent(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(state.listName) },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(state.listName)
+                        if (state.isComplete) {
+                            FilterChip(
+                                selected = true,
+                                onClick = {},
+                                label = { Text("Completada") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                },
+                                shape = RoundedCornerShape(16.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
@@ -200,7 +227,10 @@ fun ShoppingListDetailContent(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Total", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Total",
+                                style = MaterialTheme.typography.titleMedium
+                            )
                             Text(
                                 "%.2f €".format(state.total),
                                 style = MaterialTheme.typography.titleMedium
@@ -217,6 +247,17 @@ fun ShoppingListDetailContent(
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (state.isComplete) {
+                            Text(
+                                text = "Lista completada",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp),
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
@@ -611,8 +652,12 @@ fun CatalogPickerSheet(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     val groups = remember(catalogItems, categories, query) {
-        groupByCategory(
-            items = catalogItems.filterByQuery(query) { it.name },
+        groupByCategory<ItemModel>(
+            items = catalogItems.filterByQueryWithCategory(
+                query,
+                { it.name },
+                categories,
+                { it.categoryId }),
             categories = categories,
             categoryIdOf = { it.categoryId }
         )

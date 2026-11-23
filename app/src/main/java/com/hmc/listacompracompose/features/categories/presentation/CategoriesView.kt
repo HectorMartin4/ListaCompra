@@ -3,6 +3,7 @@ package com.hmc.listacompracompose.features.categories.presentation
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hmc.listacompracompose.features.categories.domain.CategoryModel
+import com.hmc.listacompracompose.ui.components.SearchField
 import com.hmc.listacompracompose.ui.theme.appTopBarColors
 import org.koin.compose.viewmodel.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
@@ -86,8 +88,13 @@ fun CategoriesContent(
     var categoryToRename by remember { mutableStateOf<CategoryModel?>(null) }
     var categoryToDelete by remember { mutableStateOf<CategoryModel?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+    var query by rememberSaveable { mutableStateOf("") }
 
-    var localList by remember(state.categories) { mutableStateOf(state.categories) }
+    val filteredList = remember(state.categories, query) {
+        state.categories.filter { it.name.contains(query, ignoreCase = true) }
+    }
+
+    var localList by remember(filteredList) { mutableStateOf(filteredList) }
     val latestList by rememberUpdatedState(localList)
 
     val lazyListState = rememberLazyListState()
@@ -118,75 +125,92 @@ fun CategoriesContent(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showCreateDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Crear categoría")
+                Icon(Icons.Filled.Add, contentDescription = "Crear categoría")
             }
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when {
-                state.isLoading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
+            SearchField(
+                query = query,
+                onQueryChange = { query = it },
+                placeholder = "Buscar categoría...",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            Box(modifier = Modifier.weight(1f)) {
+                when {
+                    state.isLoading -> {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    }
 
-                state.categories.isEmpty() -> {
-                    Text(
-                        text = "Aún no tienes categorías.\nPulsa + para crear la primera.",
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
+                    state.categories.isEmpty() -> {
+                        Text(
+                            text = "Aún no tienes categorías.\nPulsa + para crear la primera.",
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
 
-                else -> {
-                    LazyColumn(
-                        state = lazyListState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 16.dp, top = 16.dp, end = 16.dp, bottom = 88.dp
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(items = localList, key = { it.id }) { category ->
-                            ReorderableItem(reorderableState, key = category.id) { isDragging ->
-                                val elevation by animateDpAsState(
-                                    targetValue = if (isDragging) 8.dp else 2.dp,
-                                    label = "dragElevation"
-                                )
-                                Card(
-                                    onClick = { categoryToRename = category },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = elevation)
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 4.dp, horizontal = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                    filteredList.isEmpty() -> {
+                        Text(
+                            text = "No hay categorías que coincidan con \"$query\".",
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+
+                    else -> {
+                        LazyColumn(
+                            state = lazyListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp, top = 8.dp, end = 16.dp, bottom = 88.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(items = localList, key = { it.id }) { category ->
+                                ReorderableItem(reorderableState, key = category.id) { isDragging ->
+                                    val elevation by animateDpAsState(
+                                        targetValue = if (isDragging) 8.dp else 2.dp,
+                                        label = "dragElevation"
+                                    )
+                                    Card(
+                                        onClick = { categoryToRename = category },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Menu,
-                                            contentDescription = "Arrastrar para reordenar",
+                                        Row(
                                             modifier = Modifier
-                                                .draggableHandle(
-                                                    onDragStopped = {
-                                                        onReorder(latestList.map { it.id })
-                                                    }
-                                                )
-                                                .padding(12.dp)
-                                        )
-                                        Text(
-                                            text = category.name,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        IconButton(onClick = { categoryToDelete = category }) {
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp, horizontal = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
                                             Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = "Borrar categoría",
-                                                tint = MaterialTheme.colorScheme.error
+                                                imageVector = Icons.Filled.Menu,
+                                                contentDescription = "Arrastrar para reordenar",
+                                                modifier = Modifier
+                                                    .draggableHandle(
+                                                        onDragStopped = {
+                                                            onReorder(latestList.map { it.id })
+                                                        }
+                                                    )
+                                                    .padding(12.dp)
                                             )
+                                            Text(
+                                                text = category.name,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            IconButton(onClick = { categoryToDelete = category }) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.Delete,
+                                                    contentDescription = "Borrar categoría",
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -197,6 +221,7 @@ fun CategoriesContent(
             }
         }
     }
+// ... resto sin cambios ...
 
     if (showCreateDialog) {
         CategoryNameDialog(

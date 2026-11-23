@@ -12,6 +12,10 @@ class ObserveItemListUseCase(private val itemRepository: ItemRepository) {
 @Single
 class GetItemListUseCase(private val itemRepository: ItemRepository) {
     suspend operator fun invoke(): List<ItemModel> = itemRepository.getItemList()
+
+    // Catálogo de un supermercado concreto (al añadir a una lista de ese supermercado)
+    suspend operator fun invoke(supermarketId: Int): List<ItemModel> =
+        itemRepository.getItemList(supermarketId)
 }
 
 @Single
