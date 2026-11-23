@@ -4,7 +4,7 @@ App nativa de Android para gestionar las **listas de la compra**, con un catálo
 organizado por **supermercado** y **categorías**, e **historial de precios** de cada producto.
 
 Escrita en **Kotlin** con **Jetpack Compose** y una arquitectura por funcionalidades
-(*feature-based*), pensada para crecer hacia la sincronización en la nube y las listas compartidas.
+(*feature-based*).
 
 ---
 
